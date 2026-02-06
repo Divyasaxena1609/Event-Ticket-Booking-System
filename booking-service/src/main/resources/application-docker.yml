@@ -1,0 +1,5 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://auth-db:5432/auth_db
+    username: booking_user
+    password: booking_pass

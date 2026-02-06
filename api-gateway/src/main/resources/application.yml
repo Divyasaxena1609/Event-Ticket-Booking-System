@@ -1,0 +1,44 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  main:
+    web-application-type: reactive
+
+  cloud:
+    gateway:
+      routes:
+        - id: auth-service
+          uri: http://localhost:8081
+          predicates:
+            - Path=/auth/**
+
+        - id: booking-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/booking/**
+
+        - id: event-service
+          uri: http://localhost:8083
+          predicates:
+            - Path=/event/**
+
+        - id: notification-service
+          uri: http://localhost:8084
+          predicates:
+            - Path=/notification/**
+
+        - id: user-service
+          uri: http://localhost:8085
+          predicates:
+            - Path=/user/**
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
