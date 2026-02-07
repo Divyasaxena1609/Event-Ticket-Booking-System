@@ -1,4 +1,4 @@
-package com.ticketbooking.auth;
+package com.ticketbooking.auth_service;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
