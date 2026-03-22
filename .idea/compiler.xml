@@ -2,6 +2,7 @@
 <project version="4">
   <component name="CompilerConfiguration">
     <annotationProcessing>
+      <profile default="true" name="Default" enabled="true" />
       <profile name="Maven default annotation processors profile" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
@@ -10,13 +11,13 @@
         <module name="event-service" />
         <module name="booking-service" />
         <module name="api-gateway" />
+        <module name="common-framework" />
         <module name="user-service" />
         <module name="notification-service" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
       <module name="auth-service (2)" target="1.8" />
-      <module name="common-framework" target="21" />
       <module name="Event_Ticket_Booking_System" target="1.5" />
     </bytecodeTargetLevel>
   </component>

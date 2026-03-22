@@ -9,7 +9,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.4.1</version> <!-- Updated -->
+        <version>3.4.1</version>
         <relativePath/>
     </parent>
 
@@ -25,11 +25,12 @@
         <module>event-service</module>
         <module>notification-service</module>
         <module>user-service</module>
+        <module>common_framework</module>
     </modules>
 
     <properties>
         <java.version>21</java.version>
-        <spring-cloud.version>2024.0.0</spring-cloud.version> <!-- Updated -->
+        <spring-cloud.version>2024.0.0</spring-cloud.version>
     </properties>
 
     <dependencyManagement>
