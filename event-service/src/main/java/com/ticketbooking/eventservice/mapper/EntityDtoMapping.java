@@ -28,7 +28,6 @@ public class EntityDtoMapping {
     }
 
     public static void updateEntity(Event event, UpdateEventPayload dto){
-
         event.setTitle(dto.getTitle());
         event.setDescription(dto.getDescription());
         event.setCategory(dto.getCategory());
@@ -39,13 +38,15 @@ public class EntityDtoMapping {
         event.setVenueName(dto.getVenueName());
         event.setCity(dto.getCity());
         event.setAddress(dto.getAddress());
-        event.setTotalSeats(dto.getTotalSeats());
+        if (dto.getTotalSeats() > 0 && dto.getTotalSeats() != event.getTotalSeats()) {
+            int difference = dto.getTotalSeats() - event.getTotalSeats();
+            event.setTotalSeats(dto.getTotalSeats());
+            event.setAvailableSeats(Math.max(0, event.getAvailableSeats() + difference));
+        }
         event.setTicketPrice(dto.getTicketPrice());
     }
 
-
     public static CreateEventResponse toDTO(Event event){
-
         CreateEventResponse dto = new CreateEventResponse();
 
         dto.setEventUuid(event.getEventUuid());
@@ -53,6 +54,7 @@ public class EntityDtoMapping {
         dto.setDescription(event.getDescription());
         dto.setCategory(event.getCategory());
         dto.setOrganizerName(event.getOrganizerName());
+        dto.setOrganizerUserUuid(event.getOrganizerUserUuid());
         dto.setEventDate(event.getEventDate());
         dto.setStartTime(event.getStartTime());
         dto.setEndTime(event.getEndTime());
@@ -62,12 +64,12 @@ public class EntityDtoMapping {
         dto.setTotalSeats(event.getTotalSeats());
         dto.setAvailableSeats(event.getAvailableSeats());
         dto.setTicketPrice(event.getTicketPrice());
+        dto.setStatus(event.getStatus());
 
         return dto;
     }
 
     public static UpdateEventResponse UpdateDTO(Event event){
-
         UpdateEventResponse dto = new UpdateEventResponse();
 
         dto.setEventUuid(event.getEventUuid());
@@ -75,6 +77,7 @@ public class EntityDtoMapping {
         dto.setDescription(event.getDescription());
         dto.setCategory(event.getCategory());
         dto.setOrganizerName(event.getOrganizerName());
+        dto.setOrganizerUserUuid(event.getOrganizerUserUuid());
         dto.setEventDate(event.getEventDate());
         dto.setStartTime(event.getStartTime());
         dto.setEndTime(event.getEndTime());
@@ -87,5 +90,4 @@ public class EntityDtoMapping {
 
         return dto;
     }
-
 }

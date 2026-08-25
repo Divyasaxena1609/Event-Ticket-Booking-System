@@ -51,6 +51,7 @@ public class Booking {
         this.bookingUUID = StringUtils.generateUUID();
         this.createdAt = OffsetDateTime.now();
         this.updatedAt = OffsetDateTime.now();
+        this.expiresAt = OffsetDateTime.now().plusMinutes(12);
         this.status = BookingStatus.CREATED;
     }
 

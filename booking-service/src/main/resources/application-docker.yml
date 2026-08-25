@@ -8,3 +8,7 @@ spring:
     redis:
       host: localhost
       port: 6379
+
+services:
+  user:
+    url: http://user-service:8085

@@ -10,6 +10,15 @@ spring:
 
   cloud:
     gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOriginPatterns:
+              - 'http://localhost:*'
+              - 'http://127.0.0.1:*'
+            allowedMethods: '*'
+            allowedHeaders: '*'
+            allowCredentials: true
       routes:
         - id: auth-service
           uri: http://localhost:8081
@@ -19,12 +28,40 @@ spring:
         - id: booking-service
           uri: http://localhost:8082
           predicates:
+            - Path=/booking
+          filters:
+            - SetPath=/bookings
+
+        - id: booking-service-path
+          uri: http://localhost:8082
+          predicates:
             - Path=/booking/**
+          filters:
+            - StripPrefix=1
+            - PrefixPath=/bookings
+
+        - id: payment-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/payment/**
+          filters:
+            - StripPrefix=1
+            - PrefixPath=/payments
 
         - id: event-service
           uri: http://localhost:8083
           predicates:
+            - Path=/event
+          filters:
+            - SetPath=/events
+
+        - id: event-service-path
+          uri: http://localhost:8083
+          predicates:
             - Path=/event/**
+          filters:
+            - StripPrefix=1
+            - PrefixPath=/events
 
         - id: notification-service
           uri: http://localhost:8084
@@ -34,7 +71,17 @@ spring:
         - id: user-service
           uri: http://localhost:8085
           predicates:
+            - Path=/user
+          filters:
+            - SetPath=/users
+
+        - id: user-service-path
+          uri: http://localhost:8085
+          predicates:
             - Path=/user/**
+          filters:
+            - StripPrefix=1
+            - PrefixPath=/users
 
 
 management:

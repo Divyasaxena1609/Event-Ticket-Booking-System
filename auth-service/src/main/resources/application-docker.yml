@@ -3,3 +3,9 @@ spring:
     url: jdbc:postgresql://auth-db:5432/auth_db
     username: auth_user
     password: auth_pass
+
+security:
+  jwt:
+    secret: ${SECURITY_JWT_SECRET}
+    access-token-expiration: 15m
+    refresh-token-expiration: 7d

@@ -2,7 +2,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/booking_db
     username: postgres
-    password: Aman@2209
+    password: Divya@1609
 
   data:
     redis:
@@ -16,3 +16,12 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+
+razorpay:
+  key-id: rzp_test_Surl2yhYzE8VAv
+  key-secret: VyBWSQPvc4KF7uwe3bsDe0Iw
+  webhook-secret: dev_webhook_secret_123
+
+services:
+  user:
+    url: http://localhost:8085

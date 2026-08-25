@@ -7,6 +7,8 @@ import java.math.BigDecimal;
 public class EventResponseDto {
     private String eventUuid;
     private String title;
+    private String category;
+    private String organizerUserUuid;
     private Integer availableSeats;
     private BigDecimal ticketPrice;
 }

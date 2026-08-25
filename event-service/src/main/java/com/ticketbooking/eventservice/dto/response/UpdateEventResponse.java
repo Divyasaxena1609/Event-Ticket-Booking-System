@@ -18,6 +18,8 @@ public class UpdateEventResponse {
 
     private String organizerName;
 
+    private String organizerUserUuid;
+
     private LocalDate eventDate;
 
     private LocalTime startTime;

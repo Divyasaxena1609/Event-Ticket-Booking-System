@@ -6,6 +6,7 @@ import com.ticketbooking.eventservice.dto.response.CreateEventResponse;
 import com.ticketbooking.eventservice.dto.response.UpdateEventResponse;
 
 import com.ticketbooking.eventservice.service.IEventService;
+import com.ticketbooking.eventservice.security.EventAuthorizationService;
 import com.ticketbooking.model.ApiResponse;
 import com.ticketbooking.model.ResponseBuilder;
 import lombok.RequiredArgsConstructor;
@@ -19,10 +20,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class EventController {
     private final IEventService eventService;
+    private final EventAuthorizationService eventAuthorizationService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<CreateEventResponse>> createEvent(@RequestBody CreateEventPayload request){
-        CreateEventResponse response = eventService.createEvent(request);
+    public ResponseEntity<ApiResponse<CreateEventResponse>> createEvent(@RequestBody CreateEventPayload request,
+                                                                         @RequestHeader("X-User-Id") String requesterUuid){
+        eventAuthorizationService.requireOrganizerOrAdmin(requesterUuid);
+        CreateEventResponse response = eventService.createEvent(request, requesterUuid);
 
         return ResponseEntity.ok(
                 ResponseBuilder.success(response, "Event created successfully")
@@ -36,6 +40,13 @@ public class EventController {
         return ResponseEntity.ok(ResponseBuilder.success(events, "events fetched successfully"));
     }
 
+    @GetMapping("/organizer/me")
+    public ResponseEntity<ApiResponse<List<CreateEventResponse>>> getMyEvents(
+            @RequestHeader("X-User-Id") String requesterUuid) {
+        eventAuthorizationService.requireOrganizerOrAdmin(requesterUuid);
+        return ResponseEntity.ok(ResponseBuilder.success(eventService.getOrganizerEvents(requesterUuid), "Organizer events fetched successfully"));
+    }
+
     @GetMapping("/{uuid}")
     public ResponseEntity<ApiResponse<CreateEventResponse>> getEventByUuid(
             @PathVariable String uuid){
@@ -46,7 +57,10 @@ public class EventController {
     @PutMapping("/{uuid}")
     public ResponseEntity<ApiResponse<UpdateEventResponse>> updateEvent(
             @PathVariable String uuid,
-            @RequestBody UpdateEventPayload request){
+            @RequestBody UpdateEventPayload request,
+            @RequestHeader("X-User-Id") String requesterUuid){
+
+        eventAuthorizationService.requireEventOwnerOrAdmin(requesterUuid, uuid);
 
         UpdateEventResponse response = eventService.updateEvent(uuid, request);
 
@@ -54,7 +68,9 @@ public class EventController {
     }
 
     @DeleteMapping("/{uuid}")
-    public ResponseEntity<ApiResponse<String>> deleteEvent(@PathVariable String uuid){
+    public ResponseEntity<ApiResponse<String>> deleteEvent(@PathVariable String uuid,
+                                                           @RequestHeader("X-User-Id") String requesterUuid){
+        eventAuthorizationService.requireEventOwnerOrAdmin(requesterUuid, uuid);
         eventService.deleteEvent(uuid);
         return ResponseEntity.ok(ResponseBuilder.success("Deleted", "event deleted successfully"));
     }

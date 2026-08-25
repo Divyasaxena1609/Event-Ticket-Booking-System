@@ -3,3 +3,7 @@ spring:
     url: jdbc:postgresql://auth-db:5432/auth_db
     username: event_user
     password: event_pass
+
+services:
+  user:
+    url: http://user-service:8085

@@ -2,7 +2,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/auth_db
     username: postgres
-    password: Aman@2209
+    password: Divya@1609
 
   jpa:
     hibernate:
@@ -11,3 +11,10 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+
+security:
+  jwt:
+    # Replace this development-only key through SECURITY_JWT_SECRET in deployed environments.
+    secret: ${SECURITY_JWT_SECRET:VGhpcy1pcy1hLWRldmVsb3BtZW50LW9ubHktMzItYnl0ZS1rZXk=}
+    access-token-expiration: 15m
+    refresh-token-expiration: 7d

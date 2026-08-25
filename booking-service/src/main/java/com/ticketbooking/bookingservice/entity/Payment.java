@@ -38,6 +38,12 @@ public class Payment {
 
     private String transactionId;
 
+    private String razorpayOrderId;
+
+    private String razorpayPaymentId;
+
+    private String razorpaySignature;
+
     private OffsetDateTime createdAt;
 
     private OffsetDateTime updatedAt;

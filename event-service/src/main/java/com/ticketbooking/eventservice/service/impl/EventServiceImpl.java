@@ -19,12 +19,12 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor // create lombok constructor automatically for repository
+@RequiredArgsConstructor
 public class EventServiceImpl implements IEventService {
     private final EventRepository eventRepository;
 
     @Override
-    public CreateEventResponse createEvent(CreateEventPayload request){
+    public CreateEventResponse createEvent(CreateEventPayload request, String organizerUserUuid){
         if(request.getEventDate() != null &&
                 request.getEventDate().isBefore(java.time.LocalDate.now())) {
 
@@ -32,18 +32,27 @@ public class EventServiceImpl implements IEventService {
         }
 
         Event event = EntityDtoMapping.toEntity(request); // convert DTO → Entity
+        event.setOrganizerUserUuid(organizerUserUuid);
         event.setAvailableSeats(event.getTotalSeats());
+        if (event.getStatus() == null) {
+            event.setStatus(EventStatus.UPCOMING);
+        }
         eventRepository.save(event);
         return EntityDtoMapping.toDTO(event);
     }
 
     @Override
-    public  List<CreateEventResponse> getAllEvents(){
-        List<Event> events = eventRepository.findAll();
+    @Transactional(readOnly = true)
+    public List<CreateEventResponse> getAllEvents(){
+        return eventRepository.findAll().stream()
+                .map(EntityDtoMapping::toDTO)
+                .toList();
+    }
 
-        events.forEach(this::updateEventStatus);
-
-        return events.stream()
+    @Override
+    @Transactional(readOnly = true)
+    public List<CreateEventResponse> getOrganizerEvents(String organizerUserUuid) {
+        return eventRepository.findByOrganizerUserUuid(organizerUserUuid).stream()
                 .map(EntityDtoMapping::toDTO)
                 .toList();
     }
@@ -101,7 +110,7 @@ public class EventServiceImpl implements IEventService {
             return;
         }
 
-        if(event.getEventDate()
+        if (event.getEventDate() != null && event.getEndTime() != null && event.getEventDate()
                 .atTime(event.getEndTime())
                 .isBefore(java.time.LocalDateTime.now())){
 
@@ -110,7 +119,7 @@ public class EventServiceImpl implements IEventService {
             return;
         }
 
-        if(event.getAvailableSeats() == 0){
+        if (Integer.valueOf(0).equals(event.getAvailableSeats())) {
             event.setStatus(EventStatus.SOLD_OUT);
             eventRepository.save(event);
         }

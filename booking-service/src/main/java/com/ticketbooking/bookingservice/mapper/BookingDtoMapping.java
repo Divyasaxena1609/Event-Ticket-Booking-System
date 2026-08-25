@@ -25,11 +25,16 @@ public class BookingDtoMapping {
     }
 
     public List<BookingSeat> toBookingSeats(CreateBookingPayload payload, String bookingUuid) {
+        return toBookingSeats(payload, bookingUuid, null);
+    }
+
+    public List<BookingSeat> toBookingSeats(CreateBookingPayload payload, String bookingUuid, java.math.BigDecimal seatPrice) {
         return payload.getSeats().stream().map(seat -> {
             BookingSeat bs = new BookingSeat();
             bs.setBookingUUID(bookingUuid);
             bs.setEventUuid(payload.getEventUuid());
             bs.setSeatNumber(seat);
+            bs.setPrice(seatPrice);
             return bs;
         }).toList();
     }
