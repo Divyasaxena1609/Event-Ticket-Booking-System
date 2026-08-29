@@ -6,6 +6,7 @@ import com.ticketbooking.bookingservice.dto.payload.VerifyPaymentPayload;
 import com.ticketbooking.bookingservice.dto.response.CreatePaymentResponse;
 import com.ticketbooking.bookingservice.service.IPaymentService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -43,7 +44,13 @@ public class PaymentController {
             @RequestBody String payload,
             @RequestHeader(value = "X-Razorpay-Signature", required = false) String signature
     ) throws Exception {
-        paymentService.processWebhook(payload, signature);
-        return ResponseEntity.ok("Webhook processed successfully");
+        try {
+            paymentService.processWebhook(payload, signature);
+            return ResponseEntity.ok("Webhook processed successfully");
+        } catch (SecurityException exception) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid webhook signature");
+        } catch (IllegalStateException exception) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body("Webhook processing is not configured");
+        }
     }
 }

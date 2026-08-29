@@ -44,7 +44,7 @@ public class PaymentServiceImpl implements IPaymentService {
     @Value("${razorpay.key-secret}")
     private String secret;
 
-    @Value("${razorpay.webhook-secret:dev_webhook_secret_123}")
+    @Value("${razorpay.webhook-secret}")
     private String webhookSecret;
 
     @Override
@@ -71,10 +71,6 @@ public class PaymentServiceImpl implements IPaymentService {
 
         orderRequest.put("currency", "INR");
         orderRequest.put("receipt", bookingUUID);
-
-        // Set hard cutoff expire_by at 12 minutes (720 seconds) so gateway rejects any payment after window
-        long expireBy = (System.currentTimeMillis() / 1000L) + (12 * 60);
-        orderRequest.put("expire_by", expireBy);
 
         Order order = razorpayClient.orders.create(orderRequest);
 
@@ -139,16 +135,22 @@ public class PaymentServiceImpl implements IPaymentService {
     @Override
     @Transactional
     public void processWebhook(String payload, String signature) throws Exception {
-        if (signature != null && !signature.isBlank() && webhookSecret != null && !webhookSecret.isBlank()) {
-            try {
-                boolean valid = Utils.verifyWebhookSignature(payload, signature, webhookSecret);
-                if (!valid) {
-                    log.warn("Invalid Razorpay webhook signature");
-                    throw new RuntimeException("Invalid webhook signature");
-                }
-            } catch (Exception e) {
-                log.warn("Webhook signature verification warning: {}", e.getMessage());
+        if (signature == null || signature.isBlank()) {
+            throw new SecurityException("Missing Razorpay webhook signature");
+        }
+        if (webhookSecret == null || webhookSecret.isBlank()) {
+            throw new IllegalStateException("Razorpay webhook secret is not configured");
+        }
+
+        try {
+            if (!Utils.verifyWebhookSignature(payload, signature, webhookSecret)) {
+                throw new SecurityException("Invalid Razorpay webhook signature");
             }
+        } catch (SecurityException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            log.warn("Razorpay webhook signature validation failed: {}", exception.getMessage());
+            throw new SecurityException("Invalid Razorpay webhook signature", exception);
         }
 
         JSONObject eventObj = new JSONObject(payload);
@@ -193,7 +195,6 @@ public class PaymentServiceImpl implements IPaymentService {
         switch (eventType) {
             case "order.paid":
             case "payment.captured":
-            case "payment.authorized":
                 handlePaymentSuccessWebhook(payment, booking, paymentId);
                 break;
 
@@ -284,6 +285,11 @@ public class PaymentServiceImpl implements IPaymentService {
     }
 
     private void handlePaymentFailedWebhook(Payment payment, Booking booking) {
+        if (booking.getStatus() == BookingStatus.CONFIRMED || payment.getStatus() == PaymentStatus.SUCCESS) {
+            log.info("Ignoring stale payment.failed webhook for confirmed booking '{}'", booking.getBookingUUID());
+            return;
+        }
+
         payment.setStatus(PaymentStatus.FAILED);
         paymentRepository.save(payment);
 

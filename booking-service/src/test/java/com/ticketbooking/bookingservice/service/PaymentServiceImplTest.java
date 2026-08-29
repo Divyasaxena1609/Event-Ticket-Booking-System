@@ -23,7 +23,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Optional;
 
@@ -60,7 +63,7 @@ public class PaymentServiceImplTest {
     }
 
     @Test
-    void testCreateOrder_SetsExpireByAndCreatesPayment() throws Exception {
+    void testCreateOrder_CreatesPaymentWithoutUnsupportedExpiryField() throws Exception {
         Booking booking = new Booking();
         booking.setBookingUUID("booking-100");
         booking.setTotalAmount(new BigDecimal("1500.00"));
@@ -79,9 +82,7 @@ public class PaymentServiceImplTest {
 
         when(mockOrders.create(any(JSONObject.class))).thenAnswer(invocation -> {
             JSONObject req = invocation.getArgument(0);
-            assertTrue(req.has("expire_by"));
-            long expireBy = req.getLong("expire_by");
-            assertTrue(expireBy > System.currentTimeMillis() / 1000L);
+            assertFalse(req.has("expire_by"));
             return new Order(mockOrderJson);
         });
 
@@ -126,12 +127,18 @@ public class PaymentServiceImplTest {
         }
         """;
 
-        paymentService.processWebhook(webhookJson, null);
+        paymentService.processWebhook(webhookJson, signWebhookPayload(webhookJson));
 
         assertEquals(PaymentStatus.SUCCESS, payment.getStatus());
         assertEquals(BookingStatus.CONFIRMED, booking.getStatus());
         verify(seatLockService).releaseBookingLocks("event-abc", "booking-100");
         verify(bookingRepository).save(booking);
+    }
+
+    @Test
+    void testProcessWebhook_RejectsMissingSignature() {
+        assertThrows(SecurityException.class, () -> paymentService.processWebhook("{}", null));
+        verifyNoInteractions(paymentRepository, bookingRepository, bookingSeatRepository, seatLockService);
     }
 
     @Test
@@ -163,7 +170,7 @@ public class PaymentServiceImplTest {
         }
         """;
 
-        paymentService.processWebhook(webhookJson, null);
+        paymentService.processWebhook(webhookJson, signWebhookPayload(webhookJson));
 
         assertEquals(PaymentStatus.FAILED, payment.getStatus());
         assertEquals(BookingStatus.FAILED, booking.getStatus());
@@ -217,7 +224,7 @@ public class PaymentServiceImplTest {
         }
         """;
 
-        paymentService.processWebhook(webhookJson, null);
+        paymentService.processWebhook(webhookJson, signWebhookPayload(webhookJson));
 
         verify(mockPayments).refund(eq("pay_late_123"), any(JSONObject.class));
         assertEquals(PaymentStatus.REFUNDED, payment.getStatus());
@@ -247,5 +254,16 @@ public class PaymentServiceImplTest {
         verify(bookingSeatRepository).deleteByBookingUUID("booking-100");
         verify(bookingRepository).save(booking);
         verify(paymentRepository).save(payment);
+    }
+
+    private String signWebhookPayload(String payload) throws Exception {
+        Mac mac = Mac.getInstance("HmacSHA256");
+        mac.init(new SecretKeySpec("test_webhook_secret_123".getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+        byte[] digest = mac.doFinal(payload.getBytes(StandardCharsets.UTF_8));
+        StringBuilder signature = new StringBuilder();
+        for (byte value : digest) {
+            signature.append(String.format("%02x", value));
+        }
+        return signature.toString();
     }
 }

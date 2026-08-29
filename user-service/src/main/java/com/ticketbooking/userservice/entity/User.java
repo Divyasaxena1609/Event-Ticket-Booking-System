@@ -59,10 +59,18 @@ public class User {
 
     @PrePersist
     public void onCreate() {
-        this.userUuid = StringUtils.generateUUID();
-        this.role = UserRole.USER;
-        this.active = true;
-        this.createdAt = OffsetDateTime.now();
+        if (this.userUuid == null) {
+            this.userUuid = StringUtils.generateUUID();
+        }
+        if (this.role == null) {
+            this.role = UserRole.USER;
+        }
+        if (this.active == null) {
+            this.active = true;
+        }
+        if (this.createdAt == null) {
+            this.createdAt = OffsetDateTime.now();
+        }
         this.updatedAt = OffsetDateTime.now();
     }
 

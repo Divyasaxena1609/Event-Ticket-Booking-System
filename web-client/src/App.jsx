@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { ArrowRight, CalendarDays, Check, ChevronLeft, Clock, CreditCard, Download, Heart, LayoutDashboard, LogOut, MapPin, Menu, Moon, Plus, Search, Settings, ShieldCheck, Sun, Ticket, UserRound, Users, X } from 'lucide-react';
+import { ArrowRight, CalendarDays, Check, ChevronLeft, CreditCard, Download, Heart, LayoutDashboard, LogOut, MapPin, Menu, Moon, Plus, Search, Settings, ShieldCheck, Sun, Ticket, UserRound, Users, X } from 'lucide-react';
 import { bookingRows } from './data/events';
 import { api } from './lib/api';
 import { CategorySeatMap, detectLayoutType, getSeatPrice, getSeatCategoryLabel } from './components/CategorySeatMap';
@@ -54,6 +54,7 @@ const downloadTicketPdf = ({ booking, event }) => {
 };
 
 function App() {
+  const navigate = useNavigate();
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
   const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('user') || 'null'));
   const [events, setEvents] = useState([]);
@@ -74,7 +75,12 @@ function App() {
       })
       .catch(() => {});
   }, [user?.userUuid]);
-  const signOut = () => { localStorage.clear(); setUser(null); };
+  const signOut = () => {
+    localStorage.clear();
+    sessionStorage.clear();
+    setUser(null);
+    navigate('/');
+  };
   return <Routes>
     <Route path="/login" element={user ? <Navigate to="/" /> : <AuthPage onAuth={setUser} />} />
     <Route path="/register" element={user ? <Navigate to="/" /> : <AuthPage register onAuth={setUser} />} />
@@ -183,7 +189,6 @@ function LiveCheckoutFlow({ user, events }) {
   const [availability, setAvailability] = useState({ bookedSeats: [], blockedSeats: [] });
   const [error, setError] = useState('');
   const [paying, setPaying] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(720); // 12 minutes in seconds
   const [activeBookingUuid, setActiveBookingUuid] = useState(null);
 
   useEffect(() => {
@@ -223,25 +228,6 @@ function LiveCheckoutFlow({ user, events }) {
     loadAvailability();
   }, [id]);
 
-  // 12-minute TTL countdown timer
-  useEffect(() => {
-    if (step === 1) {
-      setTimeLeft(720);
-      return;
-    }
-
-    if (timeLeft <= 0) {
-      handleCancelOrBack('Your 12-minute seat reservation expired. Please choose your seats again.');
-      return;
-    }
-
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => prev - 1);
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [step, timeLeft]);
-
   if (loading) {
     return (
       <div className="mx-auto max-w-6xl px-6 py-24 text-center">
@@ -253,12 +239,6 @@ function LiveCheckoutFlow({ user, events }) {
 
   if (notFound && !event) return <Navigate to="/events" replace />;
   if (!event) return null;
-
-  const formatTime = (secs) => {
-    const m = Math.floor(secs / 60);
-    const s = secs % 60;
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  };
 
   const handleCancelOrBack = async (msg = '') => {
     if (activeBookingUuid) {
@@ -273,7 +253,6 @@ function LiveCheckoutFlow({ user, events }) {
     }
     setSeats([]);
     setStep(1);
-    setTimeLeft(720);
     if (msg) setError(msg);
     loadAvailability();
   };
@@ -323,6 +302,8 @@ function LiveCheckoutFlow({ user, events }) {
         name: 'EventHorizon',
         description: event.title,
         order_id: order.orderId,
+        // The hold is enforced by the server; this closes Checkout at the same boundary.
+        timeout: 720,
         handler: async (result) => {
           try {
             await api.verifyPayment({
@@ -405,13 +386,6 @@ function LiveCheckoutFlow({ user, events }) {
           ))}
         </div>
 
-        {/* 5-minute Countdown Banner when choosing seats or paying */}
-        {step >= 2 && (
-          <div className="flex items-center gap-2 rounded-2xl border border-amber-300 bg-amber-50 px-3.5 py-1.5 text-xs font-extrabold text-amber-950 shadow-sm dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-200">
-            <Clock size={16} className="animate-spin-slow text-amber-600 dark:text-amber-400" />
-            <span>Seats held for: <strong className="text-sm font-black text-amber-600 dark:text-amber-300">{formatTime(timeLeft)}</strong></span>
-          </div>
-        )}
       </div>
 
       <div className="grid gap-7 lg:grid-cols-[1fr_340px]">
@@ -725,7 +699,7 @@ function Confirmation({ events }) { const { id } = useParams(); const location =
 
 function AuthPage({ register, onAuth }) {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: '', phoneNumber: '', email: '', password: '' });
+  const [form, setForm] = useState({ name: '', phoneNumber: '', email: '', password: '', role: 'USER' });
   const [error, setError] = useState(''); const [submitting, setSubmitting] = useState(false);
   const change = key => e => setForm(current => ({ ...current, [key]: e.target.value }));
   const submit = async e => {
@@ -734,7 +708,13 @@ function AuthPage({ register, onAuth }) {
       let token;
       if (register) {
         const [firstName, ...lastName] = form.name.trim().split(/\s+/);
-        const profile = await api.createUser({ firstName, lastName: lastName.join(' ') || firstName, email: form.email, phoneNumber: form.phoneNumber });
+        const profile = await api.createUser({
+          firstName,
+          lastName: lastName.join(' ') || firstName,
+          email: form.email,
+          phoneNumber: form.phoneNumber,
+          role: form.role || 'USER',
+        });
         token = await api.register({ email: form.email, password: form.password, userUuid: profile.userUuid });
         localStorage.setItem('user', JSON.stringify(toDisplayUser(profile)));
         onAuth(toDisplayUser(profile));
@@ -748,10 +728,16 @@ function AuthPage({ register, onAuth }) {
       navigate('/');
     } catch (err) { setError(err.message || 'Authentication failed.'); } finally { setSubmitting(false); }
   };
-  return <div className="grid min-h-screen lg:grid-cols-2"><div className="hidden bg-[#151529] p-12 text-white lg:flex lg:flex-col"><Link to="/" className="flex items-center gap-2 font-bold"><span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-600"><Ticket size={19}/></span>EventHorizon</Link><div className="my-auto max-w-md"><p className="text-sm font-bold tracking-[.2em] text-violet-300">MAKE IT MEMORABLE</p><h1 className="mt-5 text-5xl font-bold leading-tight">Everything exciting, in one place.</h1><p className="mt-5 text-slate-300">Discover the events you love. Manage every ticket with confidence.</p></div></div><div className="flex items-center justify-center p-6"><form onSubmit={submit} className="w-full max-w-md"><p className="text-xs font-bold tracking-[.18em] text-brand-600">{register ? 'JOIN EVENTHORIZON' : 'WELCOME BACK'}</p><h1 className="mt-2 text-4xl font-bold">{register ? 'Create your account' : 'Sign in to your account'}</h1>{register && <><label className="mt-7 block text-sm font-semibold">Full name<input required className="field" value={form.name} onChange={change('name')}/></label><label className="mt-5 block text-sm font-semibold">Phone number<input required className="field" placeholder="+919876543210" value={form.phoneNumber} onChange={change('phoneNumber')}/></label></>}<label className="mt-5 block text-sm font-semibold">Email address<input required type="email" className="field" value={form.email} onChange={change('email')}/></label><label className="mt-5 block text-sm font-semibold">Password<input required minLength="8" type="password" className="field" value={form.password} onChange={change('password')}/></label>{error && <p className="mt-4 text-sm text-rose-600">{error}</p>}<button disabled={submitting} className="btn-primary mt-7 w-full disabled:opacity-50">{submitting ? 'Please wait…' : register ? 'Create account' : 'Sign in'} <ArrowRight size={17}/></button><p className="mt-7 text-center text-sm text-slate-500">{register ? 'Already have an account?' : 'New to EventHorizon?'} <Link className="font-bold text-brand-600" to={register ? '/login' : '/register'}>{register ? 'Sign in' : 'Create account'}</Link></p></form></div></div>;
+  return <div className="grid min-h-screen lg:grid-cols-2"><div className="hidden bg-[#151529] p-12 text-white lg:flex lg:flex-col"><Link to="/" className="flex items-center gap-2 font-bold"><span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-600"><Ticket size={19}/></span>EventHorizon</Link><div className="my-auto max-w-md"><p className="text-sm font-bold tracking-[.2em] text-violet-300">MAKE IT MEMORABLE</p><h1 className="mt-5 text-5xl font-bold leading-tight">Everything exciting, in one place.</h1><p className="mt-5 text-slate-300">Discover the events you love. Manage every ticket with confidence.</p></div></div><div className="flex items-center justify-center p-6"><form onSubmit={submit} className="w-full max-w-md"><p className="text-xs font-bold tracking-[.18em] text-brand-600">{register ? 'JOIN EVENTHORIZON' : 'WELCOME BACK'}</p><h1 className="mt-2 text-4xl font-bold">{register ? 'Create your account' : 'Sign in to your account'}</h1>{register && <><label className="mt-7 block text-sm font-semibold">Full name<input required className="field" value={form.name} onChange={change('name')}/></label><label className="mt-5 block text-sm font-semibold">Phone number<input required className="field" placeholder="+919876543210" value={form.phoneNumber} onChange={change('phoneNumber')}/></label><div className="mt-5"><span className="block text-sm font-semibold mb-2">I want to register as</span><div className="grid grid-cols-2 gap-3"><label className={cx('flex cursor-pointer items-center justify-center gap-2 rounded-xl border p-3 text-sm font-semibold transition', form.role === 'USER' ? 'border-brand-600 bg-brand-50 text-brand-700 dark:border-brand-500 dark:bg-brand-500/10 dark:text-brand-300 ring-2 ring-brand-600/20' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-[#1f202b] dark:text-slate-200')}><input type="radio" name="role" value="USER" checked={form.role === 'USER'} onChange={change('role')} className="sr-only"/><UserRound size={17}/> Attendee / User</label><label className={cx('flex cursor-pointer items-center justify-center gap-2 rounded-xl border p-3 text-sm font-semibold transition', form.role === 'ORGANIZER' ? 'border-brand-600 bg-brand-50 text-brand-700 dark:border-brand-500 dark:bg-brand-500/10 dark:text-brand-300 ring-2 ring-brand-600/20' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-[#1f202b] dark:text-slate-200')}><input type="radio" name="role" value="ORGANIZER" checked={form.role === 'ORGANIZER'} onChange={change('role')} className="sr-only"/><LayoutDashboard size={17}/> Organizer</label></div></div></>}<label className="mt-5 block text-sm font-semibold">Email address<input required type="email" className="field" value={form.email} onChange={change('email')}/></label><label className="mt-5 block text-sm font-semibold">Password<input required minLength="8" type="password" className="field" value={form.password} onChange={change('password')}/></label>{error && <p className="mt-4 text-sm text-rose-600">{error}</p>}<button disabled={submitting} className="btn-primary mt-7 w-full disabled:opacity-50">{submitting ? 'Please wait…' : register ? 'Create account' : 'Sign in'} <ArrowRight size={17}/></button><p className="mt-7 text-center text-sm text-slate-500">{register ? 'Already have an account?' : 'New to EventHorizon?'} <Link className="font-bold text-brand-600" to={register ? '/login' : '/register'}>{register ? 'Sign in' : 'Create account'}</Link></p></form></div></div>;
 }
 function Bookings() { return <div className="mx-auto max-w-6xl px-6 py-12"><SectionTitle eyebrow="MY TICKETS" title="Your bookings"/><div className="grid gap-5">{bookingRows.map(b => <div key={b.id} className="panel grid overflow-hidden sm:grid-cols-[180px_1fr_auto]"><img src={b.event.image} className="h-40 w-full object-cover sm:h-full" alt=""/><div className="p-5"><span className="tag">{b.status}</span><h3 className="mt-3 text-xl font-bold">{b.event.title}</h3><p className="mt-2 text-sm text-slate-500">{b.event.date} · {b.event.time}</p><p className="mt-1 text-sm text-slate-500">{b.seats}</p></div><div className="flex items-center p-5 sm:justify-end"><button className="btn-secondary">View ticket</button></div></div>)}</div></div> }
-function Account({ user, setUser, signOut }) { const [saved, setSaved] = useState(false); const [name, setName] = useState(user?.name || 'Alex Morgan'); const save = e => { e.preventDefault(); const updated = {...user, name}; setUser(updated); localStorage.setItem('user', JSON.stringify(updated)); setSaved(true); }; return <div className="mx-auto max-w-5xl px-6 py-12"><SectionTitle eyebrow="ACCOUNT" title="Profile & settings"/><div className="grid gap-7 md:grid-cols-[200px_1fr]"><aside className="panel h-fit p-3"><Link className="menu !bg-brand-50 !text-brand-700 dark:!bg-brand-500/15 dark:!text-white" to="/account"><UserRound size={17}/> Personal details</Link><Link className="menu" to="/bookings"><Ticket size={17}/> My bookings</Link><button className="menu w-full text-left"><Settings size={17}/> Preferences</button><button onClick={signOut} className="menu w-full text-left text-rose-600"><LogOut size={17}/> Log out</button></aside><div className="panel p-6 sm:p-8"><h2 className="text-xl font-bold">Personal details</h2><p className="mt-1 text-sm text-slate-500">Keep your information up to date.</p><form onSubmit={save} className="mt-7 grid gap-5 sm:grid-cols-2"><label className="text-sm font-semibold">Full name<input className="field" value={name} onChange={e => setName(e.target.value)}/></label><label className="text-sm font-semibold">Email<input className="field" value={user?.email || ''} disabled/></label><label className="text-sm font-semibold">Phone number<input className="field" placeholder="+91 98765 43210"/></label><label className="text-sm font-semibold">City<input className="field" placeholder="New Delhi"/></label><div className="sm:col-span-2"><button className="btn-primary">Save changes</button>{saved && <span className="ml-3 text-sm font-semibold text-emerald-600">Saved!</span>}</div></form><div className="mt-10 border-t pt-7 dark:border-white/10"><h3 className="font-bold">Appearance</h3><p className="mt-1 text-sm text-slate-500">Use the sun/moon control in the header to switch light and dark mode.</p></div></div></div></div> }
+function Account({ user, setUser, signOut }) {
+  if (!user) return <Navigate to="/" replace />;
+  const [saved, setSaved] = useState(false);
+  const [name, setName] = useState(user?.name || 'Alex Morgan');
+  const save = e => { e.preventDefault(); const updated = {...user, name}; setUser(updated); localStorage.setItem('user', JSON.stringify(updated)); setSaved(true); };
+  return <div className="mx-auto max-w-5xl px-6 py-12"><SectionTitle eyebrow="ACCOUNT" title="Profile & settings"/><div className="grid gap-7 md:grid-cols-[200px_1fr]"><aside className="panel h-fit p-3"><Link className="menu !bg-brand-50 !text-brand-700 dark:!bg-brand-500/15 dark:!text-white" to="/account"><UserRound size={17}/> Personal details</Link><Link className="menu" to="/bookings"><Ticket size={17}/> My bookings</Link><button className="menu w-full text-left"><Settings size={17}/> Preferences</button><button onClick={signOut} className="menu w-full text-left text-rose-600"><LogOut size={17}/> Log out</button></aside><div className="panel p-6 sm:p-8"><h2 className="text-xl font-bold">Personal details</h2><p className="mt-1 text-sm text-slate-500">Keep your information up to date.</p><form onSubmit={save} className="mt-7 grid gap-5 sm:grid-cols-2"><label className="text-sm font-semibold">Full name<input className="field" value={name} onChange={e => setName(e.target.value)}/></label><label className="text-sm font-semibold">Email<input className="field" value={user?.email || ''} disabled/></label><label className="text-sm font-semibold">Phone number<input className="field" placeholder="+91 98765 43210"/></label><label className="text-sm font-semibold">City<input className="field" placeholder="New Delhi"/></label><div className="sm:col-span-2"><button className="btn-primary">Save changes</button>{saved && <span className="ml-3 text-sm font-semibold text-emerald-600">Saved!</span>}</div></form><div className="mt-10 border-t pt-7 dark:border-white/10"><h3 className="font-bold">Appearance</h3><p className="mt-1 text-sm text-slate-500">Use the sun/moon control in the header to switch light and dark mode.</p></div></div></div></div>;
+}
 function Organizer({ events }) { return <Dashboard role="Organizer" cards={[['₹1.28L','Gross sales'],['842','Tickets sold'],['3','Live events']]} title="Good morning, organizer"><div className="panel p-6"><div className="flex items-center justify-between"><h2 className="text-xl font-bold">Your events</h2><button className="btn-primary"><Plus size={17}/> Create event</button></div><div className="mt-5 divide-y dark:divide-white/10">{events.slice(0,3).map(e => <div className="flex items-center gap-4 py-4" key={e.id}><img className="h-12 w-12 rounded-xl object-cover" src={e.image}/><div className="flex-1"><b>{e.title}</b><p className="text-xs text-slate-500">{e.date} · {e.seats} seats left</p></div><button className="btn-secondary">Manage</button></div>)}</div></div></Dashboard> }
 function OrganizerLive() {
   const [data, setData] = useState(null);

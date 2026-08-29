@@ -17,4 +17,5 @@ public class CreateUserPayload {
     @NotBlank(message = "Phone number is required")
     @Pattern(regexp = "^[+]?[0-9]{7,15}$", message = "Phone number must contain 7 to 15 digits")
     private String phoneNumber;
+    private com.ticketbooking.userservice.entity.UserRole role;
 }
