@@ -11,4 +11,5 @@ public class EventResponseDto {
     private String organizerUserUuid;
     private Integer availableSeats;
     private BigDecimal ticketPrice;
+    private String status;
 }

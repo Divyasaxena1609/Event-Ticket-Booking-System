@@ -18,24 +18,27 @@ public class PaymentController {
 
     @PostMapping("/create-order")
     public CreatePaymentResponse createOrder(
-            @RequestBody CreatePaymentPayload request
+            @RequestBody CreatePaymentPayload request,
+            @RequestHeader("X-User-Id") String requesterUuid
     ) throws Exception {
-        return paymentService.createOrder(request.getBookingUUID());
+        return paymentService.createOrder(request.getBookingUUID(), requesterUuid);
     }
 
     @PostMapping("/verify")
     public String verifyPayment(
-            @RequestBody VerifyPaymentPayload payload
+            @RequestBody VerifyPaymentPayload payload,
+            @RequestHeader("X-User-Id") String requesterUuid
     ) throws Exception {
-        paymentService.verifyPayment(payload);
+        paymentService.verifyPayment(payload, requesterUuid);
         return "Payment verified successfully";
     }
 
     @PostMapping("/fail")
     public ResponseEntity<String> failPayment(
-            @RequestBody FailPaymentPayload payload
+            @RequestBody FailPaymentPayload payload,
+            @RequestHeader("X-User-Id") String requesterUuid
     ) throws Exception {
-        paymentService.failPayment(payload.getBookingUUID(), payload.getRazorpayOrderId(), payload.getReason());
+        paymentService.failPayment(payload.getBookingUUID(), payload.getRazorpayOrderId(), payload.getReason(), requesterUuid);
         return ResponseEntity.ok("Payment failure recorded and seats released");
     }
 

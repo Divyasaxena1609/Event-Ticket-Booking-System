@@ -3,6 +3,7 @@ package com.ticketbooking.bookingservice.service.Impl;
 import com.ticketbooking.bookingservice.service.ISeatLockService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -21,6 +22,9 @@ public class SeatLockServiceImpl implements ISeatLockService {
     private static final String KEY_PREFIX = "seat_lock:";
     private final RedisTemplate<String, String> redisTemplate;
     private volatile boolean isRedisAvailable = false;
+
+    @Value("${seat-lock.allow-in-memory-fallback:true}")
+    private boolean allowInMemoryFallback = true;
 
     // In-memory fallback lock store for when standalone Redis is not installed locally
     private final Map<String, LockEntry> inMemoryLocks = new ConcurrentHashMap<>();
@@ -109,6 +113,11 @@ public class SeatLockServiceImpl implements ISeatLockService {
                 }
             }
 
+            if (!isRedisAvailable && !allowInMemoryFallback) {
+                rollbackKeys(successfullyLockedKeys);
+                throw new IllegalStateException("Seat locking is temporarily unavailable");
+            }
+
             if (!isRedisAvailable) {
                 // In-memory atomic locking with TTL
                 evictExpiredInMemoryLocks();
@@ -154,10 +163,13 @@ public class SeatLockServiceImpl implements ISeatLockService {
             String key = buildKey(eventUuid, seat);
             if (isRedisAvailable) {
                 try {
-                    redisTemplate.delete(key);
+                    String value = redisTemplate.opsForValue().get(key);
+                    if (value != null && value.startsWith(userUuid + ":")) {
+                        redisTemplate.delete(key);
+                    }
                 } catch (Exception ignored) {}
             }
-            inMemoryLocks.remove(key);
+            inMemoryLocks.computeIfPresent(key, (ignored, entry) -> userUuid.equals(entry.getUserUuid()) ? null : entry);
         }
         log.info("Released seat locks for seats {} on event '{}'", seats, eventUuid);
     }

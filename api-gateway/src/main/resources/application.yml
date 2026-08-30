@@ -1,6 +1,11 @@
 server:
   port: 8080
 
+security:
+  jwt:
+    # Must match auth-service; override with SECURITY_JWT_SECRET outside local development.
+    secret: ${SECURITY_JWT_SECRET:VGhpcy1pcy1hLWRldmVsb3BtZW50LW9ubHktMzItYnl0ZS1rZXk=}
+
 spring:
   application:
     name: api-gateway

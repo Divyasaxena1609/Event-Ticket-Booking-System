@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -44,7 +45,7 @@ public class EventServiceImpl implements IEventService {
     @Override
     @Transactional(readOnly = true)
     public List<CreateEventResponse> getAllEvents(){
-        return eventRepository.findAll().stream()
+        return eventRepository.findByDeletedAtIsNullAndEventDateGreaterThanEqualAndStatusNot(LocalDate.now(), EventStatus.CANCELLED).stream()
                 .map(EntityDtoMapping::toDTO)
                 .toList();
     }
@@ -52,12 +53,12 @@ public class EventServiceImpl implements IEventService {
     @Override
     @Transactional(readOnly = true)
     public List<CreateEventResponse> getOrganizerEvents(String organizerUserUuid) {
-        return eventRepository.findByOrganizerUserUuid(organizerUserUuid).stream()
+        return eventRepository.findByOrganizerUserUuidAndDeletedAtIsNull(organizerUserUuid).stream()
                 .map(EntityDtoMapping::toDTO)
                 .toList();
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     @Override
     public CreateEventResponse getEventByUuid(String eventUuid){
 
@@ -81,6 +82,10 @@ public class EventServiceImpl implements IEventService {
 
         if(event.getStatus() == EventStatus.COMPLETED){
             throw new ApplicationException(ApplicationExceptionTypes.EVENT_ALREADY_COMPLETED);
+        }
+
+        if (payload.getEventDate() != null && payload.getEventDate().isBefore(LocalDate.now())) {
+            throw new ApplicationException(ApplicationExceptionTypes.INVALID_EVENT_DATE);
         }
 
         EntityDtoMapping.updateEntity(event, payload);

@@ -28,22 +28,22 @@ public class EntityDtoMapping {
     }
 
     public static void updateEntity(Event event, UpdateEventPayload dto){
-        event.setTitle(dto.getTitle());
-        event.setDescription(dto.getDescription());
-        event.setCategory(dto.getCategory());
-        event.setOrganizerName(dto.getOrganizerName());
-        event.setEventDate(dto.getEventDate());
-        event.setStartTime(dto.getStartTime());
-        event.setEndTime(dto.getEndTime());
-        event.setVenueName(dto.getVenueName());
-        event.setCity(dto.getCity());
-        event.setAddress(dto.getAddress());
-        if (dto.getTotalSeats() > 0 && dto.getTotalSeats() != event.getTotalSeats()) {
+        if (dto.getTitle() != null) event.setTitle(dto.getTitle());
+        if (dto.getDescription() != null) event.setDescription(dto.getDescription());
+        if (dto.getCategory() != null) event.setCategory(dto.getCategory());
+        if (dto.getOrganizerName() != null) event.setOrganizerName(dto.getOrganizerName());
+        if (dto.getEventDate() != null) event.setEventDate(dto.getEventDate());
+        if (dto.getStartTime() != null) event.setStartTime(dto.getStartTime());
+        if (dto.getEndTime() != null) event.setEndTime(dto.getEndTime());
+        if (dto.getVenueName() != null) event.setVenueName(dto.getVenueName());
+        if (dto.getCity() != null) event.setCity(dto.getCity());
+        if (dto.getAddress() != null) event.setAddress(dto.getAddress());
+        if (dto.getTotalSeats() != null && dto.getTotalSeats() > 0 && dto.getTotalSeats() != event.getTotalSeats()) {
             int difference = dto.getTotalSeats() - event.getTotalSeats();
             event.setTotalSeats(dto.getTotalSeats());
             event.setAvailableSeats(Math.max(0, event.getAvailableSeats() + difference));
         }
-        event.setTicketPrice(dto.getTicketPrice());
+        if (dto.getTicketPrice() != null) event.setTicketPrice(dto.getTicketPrice());
     }
 
     public static CreateEventResponse toDTO(Event event){

@@ -14,6 +14,7 @@ import com.ticketbooking.bookingservice.repository.BookingRepository;
 import com.ticketbooking.bookingservice.repository.BookingSeatRepository;
 import com.ticketbooking.bookingservice.repository.PaymentRepository;
 import com.ticketbooking.bookingservice.service.Impl.PaymentServiceImpl;
+import com.ticketbooking.bookingservice.security.UserAuthorizationService;
 import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -52,6 +53,9 @@ public class PaymentServiceImplTest {
     @Mock
     private ISeatLockService seatLockService;
 
+    @Mock
+    private UserAuthorizationService userAuthorizationService;
+
     @InjectMocks
     private PaymentServiceImpl paymentService;
 
@@ -86,7 +90,7 @@ public class PaymentServiceImplTest {
             return new Order(mockOrderJson);
         });
 
-        CreatePaymentResponse response = paymentService.createOrder("booking-100");
+        CreatePaymentResponse response = paymentService.createOrder("booking-100", "user-100");
 
         assertNotNull(response);
         assertEquals("order_rzp_999", response.getOrderId());
@@ -175,7 +179,7 @@ public class PaymentServiceImplTest {
         assertEquals(PaymentStatus.FAILED, payment.getStatus());
         assertEquals(BookingStatus.FAILED, booking.getStatus());
         verify(seatLockService).releaseBookingLocks("event-abc", "booking-100");
-        verify(bookingSeatRepository).deleteByBookingUUID("booking-100");
+        verify(bookingSeatRepository, never()).deleteByBookingUUID("booking-100");
         verify(bookingRepository).save(booking);
     }
 
@@ -246,12 +250,12 @@ public class PaymentServiceImplTest {
         when(paymentRepository.findByRazorpayOrderId("order_123")).thenReturn(Optional.of(payment));
         when(bookingRepository.findByBookingUUID("booking-100")).thenReturn(Optional.of(booking));
 
-        paymentService.failPayment("booking-100", "order_123", "Card declined by issuing bank");
+        paymentService.failPayment("booking-100", "order_123", "Card declined by issuing bank", "user-100");
 
         assertEquals(PaymentStatus.FAILED, payment.getStatus());
         assertEquals(BookingStatus.FAILED, booking.getStatus());
         verify(seatLockService).releaseBookingLocks("event-abc", "booking-100");
-        verify(bookingSeatRepository).deleteByBookingUUID("booking-100");
+        verify(bookingSeatRepository, never()).deleteByBookingUUID("booking-100");
         verify(bookingRepository).save(booking);
         verify(paymentRepository).save(payment);
     }

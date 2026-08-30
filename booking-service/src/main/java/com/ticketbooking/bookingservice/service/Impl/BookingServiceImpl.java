@@ -46,20 +46,18 @@ public class BookingServiceImpl implements IBookingService {
     public CreateBookingResponse createBooking(CreateBookingPayload payload, String requesterUuid){
         userAuthorizationService.requireOwnerOrAdmin(requesterUuid, payload.getUserId());
         validateBookingUser(payload.getUserId());
-        EventResponseDto event = null;
+        EventResponseDto event;
         try {
             ApiResponse<EventResponseDto> response = eventClient.getEvent(payload.getEventUuid());
-            if (response != null && response.getData() != null) {
-                event = response.getData();
-            }
-        } catch (Exception ignored) {}
-
-        if (event == null) {
-            event = new EventResponseDto();
-            event.setEventUuid(payload.getEventUuid());
-            event.setCategory("Event");
-            event.setTitle("");
-            event.setTicketPrice(payload.getTicketPrice() != null ? payload.getTicketPrice() : new BigDecimal("500"));
+            event = response != null ? response.getData() : null;
+        } catch (Exception exception) {
+            throw new ApplicationException(ApplicationExceptionTypes.EVENT_NOT_FOUND);
+        }
+        if (event == null || event.getTicketPrice() == null) {
+            throw new ApplicationException(ApplicationExceptionTypes.EVENT_NOT_FOUND);
+        }
+        if (event.getStatus() != null && !"UPCOMING".equals(event.getStatus())) {
+            throw new RuntimeException("Tickets are not available for this event");
         }
 
         if (payload.getSeats() == null || payload.getSeats().isEmpty()) {
@@ -102,9 +100,7 @@ public class BookingServiceImpl implements IBookingService {
             throw new RuntimeException("One or more selected seats are currently held by another user or already booked. Please choose different seats.");
         }
 
-        BigDecimal unitPrice = (event != null && event.getTicketPrice() != null)
-                ? event.getTicketPrice()
-                : (payload.getTicketPrice() != null ? payload.getTicketPrice() : new BigDecimal("500"));
+        BigDecimal unitPrice = event.getTicketPrice();
 
         booking.setTotalAmount(unitPrice.multiply(BigDecimal.valueOf(payload.getSeats().size())));
         booking = bookingRepository.save(booking);
@@ -242,7 +238,6 @@ public class BookingServiceImpl implements IBookingService {
 
         if (booking.getStatus() == BookingStatus.CREATED) {
             seatLockService.releaseBookingLocks(booking.getEventUuid(), bookingUUID);
-            bookingSeatRepository.deleteByBookingUUID(bookingUUID);
             booking.setStatus(BookingStatus.CANCELLED);
             bookingRepository.save(booking);
             log.info("Released and cancelled unconfirmed booking '{}'", bookingUUID);
@@ -266,7 +261,6 @@ public class BookingServiceImpl implements IBookingService {
         }
 
         seatLockService.releaseBookingLocks(booking.getEventUuid(), bookingUUID);
-        bookingSeatRepository.deleteByBookingUUID(bookingUUID);
         booking.setStatus(BookingStatus.CANCELLED);
         bookingRepository.save(booking);
     }

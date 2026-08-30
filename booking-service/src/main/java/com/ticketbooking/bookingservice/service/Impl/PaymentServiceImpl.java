@@ -15,6 +15,7 @@ import com.ticketbooking.bookingservice.repository.BookingSeatRepository;
 import com.ticketbooking.bookingservice.repository.PaymentRepository;
 import com.ticketbooking.bookingservice.service.IPaymentService;
 import com.ticketbooking.bookingservice.service.ISeatLockService;
+import com.ticketbooking.bookingservice.security.UserAuthorizationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
@@ -37,6 +38,7 @@ public class PaymentServiceImpl implements IPaymentService {
     private final BookingSeatRepository bookingSeatRepository;
     private final PaymentRepository paymentRepository;
     private final ISeatLockService seatLockService;
+    private final UserAuthorizationService userAuthorizationService;
 
     @Value("${razorpay.key-id}")
     private String key;
@@ -48,10 +50,14 @@ public class PaymentServiceImpl implements IPaymentService {
     private String webhookSecret;
 
     @Override
-    public CreatePaymentResponse createOrder(String bookingUUID) throws Exception {
+    public CreatePaymentResponse createOrder(String bookingUUID, String requesterUuid) throws Exception {
 
         Booking booking = bookingRepository.findByBookingUUID(bookingUUID)
                 .orElseThrow(() -> new RuntimeException("Booking not found"));
+        userAuthorizationService.requireOwnerOrAdmin(requesterUuid, booking.getUserId());
+        if (booking.getStatus() != BookingStatus.CREATED) {
+            throw new RuntimeException("Only pending bookings can be paid");
+        }
 
         Payment existingPayment = paymentRepository
                 .findByBookingUuid(bookingUUID)
@@ -94,11 +100,16 @@ public class PaymentServiceImpl implements IPaymentService {
 
     @Override
     @Transactional
-    public void verifyPayment(VerifyPaymentPayload payload) throws Exception {
+    public void verifyPayment(VerifyPaymentPayload payload, String requesterUuid) throws Exception {
 
         Payment payment = paymentRepository
                 .findByRazorpayOrderId(payload.getRazorpayOrderId())
                 .orElseThrow(() -> new RuntimeException("Payment not found"));
+
+        Booking booking = bookingRepository
+                .findByBookingUUID(payment.getBookingUuid())
+                .orElseThrow(() -> new RuntimeException("Booking not found"));
+        userAuthorizationService.requireOwnerOrAdmin(requesterUuid, booking.getUserId());
 
         JSONObject options = new JSONObject();
 
@@ -119,10 +130,6 @@ public class PaymentServiceImpl implements IPaymentService {
         payment.setRazorpayPaymentId(payload.getRazorpayPaymentId());
         payment.setRazorpaySignature(payload.getRazorpaySignature());
         paymentRepository.save(payment);
-
-        Booking booking = bookingRepository
-                .findByBookingUUID(payment.getBookingUuid())
-                .orElseThrow(() -> new RuntimeException("Booking not found"));
 
         booking.setStatus(BookingStatus.CONFIRMED);
         bookingRepository.save(booking);
@@ -296,8 +303,6 @@ public class PaymentServiceImpl implements IPaymentService {
         if (booking.getStatus() == BookingStatus.CREATED) {
             // Instantly release temporary seat locks upon failure
             seatLockService.releaseBookingLocks(booking.getEventUuid(), booking.getBookingUUID());
-            bookingSeatRepository.deleteByBookingUUID(booking.getBookingUUID());
-
             booking.setStatus(BookingStatus.FAILED);
             bookingRepository.save(booking);
             log.info("Payment failed webhook processed. Immediately released seats for booking '{}'", booking.getBookingUUID());
@@ -306,7 +311,7 @@ public class PaymentServiceImpl implements IPaymentService {
 
     @Override
     @Transactional
-    public void failPayment(String bookingUUID, String razorpayOrderId, String reason) throws Exception {
+    public void failPayment(String bookingUUID, String razorpayOrderId, String reason, String requesterUuid) throws Exception {
         Payment payment = null;
         if (razorpayOrderId != null && !razorpayOrderId.isBlank()) {
             payment = paymentRepository.findByRazorpayOrderId(razorpayOrderId).orElse(null);
@@ -323,9 +328,11 @@ public class PaymentServiceImpl implements IPaymentService {
         String targetBookingUuid = bookingUUID != null ? bookingUUID : (payment != null ? payment.getBookingUuid() : null);
         if (targetBookingUuid != null) {
             Booking booking = bookingRepository.findByBookingUUID(targetBookingUuid).orElse(null);
+            if (booking != null) {
+                userAuthorizationService.requireOwnerOrAdmin(requesterUuid, booking.getUserId());
+            }
             if (booking != null && booking.getStatus() != BookingStatus.CONFIRMED) {
                 seatLockService.releaseBookingLocks(booking.getEventUuid(), targetBookingUuid);
-                bookingSeatRepository.deleteByBookingUUID(targetBookingUuid);
                 booking.setStatus(BookingStatus.FAILED);
                 bookingRepository.save(booking);
                 log.info("Payment explicitly marked as FAILED and seats released for booking '{}'. Reason: {}", targetBookingUuid, reason);

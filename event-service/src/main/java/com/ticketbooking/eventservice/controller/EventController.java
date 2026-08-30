@@ -12,6 +12,7 @@ import com.ticketbooking.model.ResponseBuilder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.util.List;
 
@@ -23,7 +24,7 @@ public class EventController {
     private final EventAuthorizationService eventAuthorizationService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<CreateEventResponse>> createEvent(@RequestBody CreateEventPayload request,
+    public ResponseEntity<ApiResponse<CreateEventResponse>> createEvent(@Valid @RequestBody CreateEventPayload request,
                                                                          @RequestHeader("X-User-Id") String requesterUuid){
         eventAuthorizationService.requireOrganizerOrAdmin(requesterUuid);
         CreateEventResponse response = eventService.createEvent(request, requesterUuid);
@@ -57,7 +58,7 @@ public class EventController {
     @PutMapping("/{uuid}")
     public ResponseEntity<ApiResponse<UpdateEventResponse>> updateEvent(
             @PathVariable String uuid,
-            @RequestBody UpdateEventPayload request,
+            @Valid @RequestBody UpdateEventPayload request,
             @RequestHeader("X-User-Id") String requesterUuid){
 
         eventAuthorizationService.requireEventOwnerOrAdmin(requesterUuid, uuid);

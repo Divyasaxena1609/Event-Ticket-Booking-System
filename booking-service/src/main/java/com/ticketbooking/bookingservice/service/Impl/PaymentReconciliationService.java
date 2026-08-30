@@ -32,18 +32,14 @@ public class PaymentReconciliationService {
     @Transactional
     public void releaseExpiredBookings() {
         OffsetDateTime now = OffsetDateTime.now();
-        List<Booking> pendingBookings = bookingRepository.findAll().stream()
-                .filter(b -> b.getStatus() == BookingStatus.CREATED)
-                .filter(b -> (b.getExpiresAt() != null && b.getExpiresAt().isBefore(now)) ||
-                        (b.getCreatedAt() != null && b.getCreatedAt().isBefore(now.minusMinutes(12))))
-                .toList();
+        List<Booking> pendingBookings = bookingRepository.findExpiredPendingBookings(
+                BookingStatus.CREATED, now, now.minusMinutes(12));
 
         if (!pendingBookings.isEmpty()) {
             log.info("Reconciliation sweeper found {} expired pending bookings to clean up.", pendingBookings.size());
             for (Booking booking : pendingBookings) {
                 try {
                     seatLockService.releaseBookingLocks(booking.getEventUuid(), booking.getBookingUUID());
-                    bookingSeatRepository.deleteByBookingUUID(booking.getBookingUUID());
                     booking.setStatus(BookingStatus.EXPIRED);
                     bookingRepository.save(booking);
                     log.info("Auto-expired booking '{}' and released seat locks after 12-minute window.", booking.getBookingUUID());

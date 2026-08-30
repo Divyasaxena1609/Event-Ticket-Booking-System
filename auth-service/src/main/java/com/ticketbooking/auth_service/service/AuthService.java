@@ -95,7 +95,9 @@ public class AuthService {
     private Claims claims(String token, String expectedType) {
         try {
             Claims claims = Jwts.parser().verifyWith(key()).build().parseSignedClaims(token).getPayload();
-            if (!expectedType.equals(claims.get("type", String.class))) throw invalidRefreshToken();
+            if (!expectedType.equals(claims.get("type", String.class))) {
+                throw new AuthException(HttpStatus.UNAUTHORIZED, "Invalid token type: expected " + expectedType + " token");
+            }
             return claims;
         } catch (AuthException exception) { throw exception; }
         catch (Exception exception) { throw new AuthException(HttpStatus.UNAUTHORIZED, "Invalid or expired token"); }

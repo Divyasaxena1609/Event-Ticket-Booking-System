@@ -10,8 +10,13 @@ spring:
       port: ${REDIS_PORT:6379}
 
 services:
+  event:
+    url: ${EVENT_SERVICE_URL:http://event-service:8083}
   user:
     url: http://user-service:8085
+
+seat-lock:
+  allow-in-memory-fallback: false
 
 razorpay:
   key-id: ${RAZORPAY_KEY_ID}

@@ -1,5 +1,10 @@
 package com.ticketbooking.eventservice.dto.payload;
 import lombok.Data;
+import jakarta.validation.constraints.FutureOrPresent;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -7,7 +12,7 @@ import java.time.LocalTime;
 
 @Data
 public class CreateEventPayload {
-    private String title;
+    @NotBlank private String title;
 
     private String description;
 
@@ -15,19 +20,19 @@ public class CreateEventPayload {
 
     private String organizerName;
 
-    private LocalDate eventDate;
+    @NotNull @FutureOrPresent private LocalDate eventDate;
 
     private LocalTime startTime;
 
     private LocalTime endTime;
 
-    private String venueName;
+    @NotBlank private String venueName;
 
-    private String city;
+    @NotBlank private String city;
 
     private String address;
 
-    private int totalSeats;
+    @Positive private int totalSeats;
 
-    private BigDecimal ticketPrice;
+    @NotNull @PositiveOrZero private BigDecimal ticketPrice;
 }
