@@ -1,0 +1,137 @@
+services:
+  auth-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: auth_pass
+    volumes: [auth-db-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auth_user -d auth_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  user-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: user_db
+      POSTGRES_USER: user_postgres
+      POSTGRES_PASSWORD: user_pass
+    volumes: [user-db-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user_postgres -d user_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  event-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: event_db
+      POSTGRES_USER: event_user
+      POSTGRES_PASSWORD: event_pass
+    volumes: [event-db-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U event_user -d event_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  booking-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: booking_db
+      POSTGRES_USER: booking_user
+      POSTGRES_PASSWORD: booking_pass
+    volumes: [booking-db-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U booking_user -d booking_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes: [redis-data:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  user-service:
+    build: { context: ., dockerfile: docker/Dockerfile.backend, args: { SERVICE: user-service } }
+    environment: { SPRING_PROFILES_ACTIVE: docker }
+    depends_on: { user-db: { condition: service_healthy } }
+
+  auth-service:
+    build: { context: ., dockerfile: docker/Dockerfile.backend, args: { SERVICE: auth-service } }
+    env_file: [./auth-service/.env]
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SECURITY_JWT_SECRET: ${SECURITY_JWT_SECRET:-VGhpcy1pcy1hLWRldmVsb3BtZW50LW9ubHktMzItYnl0ZS1rZXk=}
+      USER_SERVICE_URL: http://user-service:8085
+    depends_on:
+      auth-db: { condition: service_healthy }
+      user-service: { condition: service_started }
+
+  event-service:
+    build: { context: ., dockerfile: docker/Dockerfile.backend, args: { SERVICE: event-service } }
+    environment: { SPRING_PROFILES_ACTIVE: docker, USER_SERVICE_URL: http://user-service:8085 }
+    depends_on:
+      event-db: { condition: service_healthy }
+      user-service: { condition: service_started }
+
+  booking-service:
+    build: { context: ., dockerfile: docker/Dockerfile.backend, args: { SERVICE: booking-service } }
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      BOOKING_DB_URL: jdbc:postgresql://booking-db:5432/booking_db
+      BOOKING_DB_USERNAME: booking_user
+      BOOKING_DB_PASSWORD: booking_pass
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      EVENT_SERVICE_URL: http://event-service:8083
+      USER_SERVICE_URL: http://user-service:8085
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-}
+    depends_on:
+      booking-db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      event-service: { condition: service_started }
+      user-service: { condition: service_started }
+
+  notification-service:
+    build: { context: ., dockerfile: docker/Dockerfile.backend, args: { SERVICE: notification-service } }
+    environment: { SPRING_PROFILES_ACTIVE: docker }
+
+  api-gateway:
+    build: { context: ., dockerfile: docker/Dockerfile.backend, args: { SERVICE: api-gateway } }
+    environment:
+      SECURITY_JWT_SECRET: ${SECURITY_JWT_SECRET:-VGhpcy1pcy1hLWRldmVsb3BtZW50LW9ubHktMzItYnl0ZS1rZXk=}
+      AUTH_SERVICE_URL: http://auth-service:8081
+      BOOKING_SERVICE_URL: http://booking-service:8082
+      EVENT_SERVICE_URL: http://event-service:8083
+      NOTIFICATION_SERVICE_URL: http://notification-service:8084
+      USER_SERVICE_URL: http://user-service:8085
+    depends_on:
+      auth-service: { condition: service_started }
+      booking-service: { condition: service_started }
+      event-service: { condition: service_started }
+      notification-service: { condition: service_started }
+      user-service: { condition: service_started }
+
+  web-client:
+    build: { context: ., dockerfile: docker/Dockerfile.web, args: { VITE_API_URL: /api } }
+    ports: ["8088:80"]
+    depends_on: { api-gateway: { condition: service_started } }
+
+volumes:
+  auth-db-data:
+  user-db-data:
+  event-db-data:
+  booking-db-data:
+  redis-data:

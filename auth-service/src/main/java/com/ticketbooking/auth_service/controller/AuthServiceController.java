@@ -1,8 +1,10 @@
 package com.ticketbooking.auth_service.controller;
 
 import com.ticketbooking.auth_service.dto.payload.LoginRequest;
+import com.ticketbooking.auth_service.dto.payload.ForgotPasswordRequest;
 import com.ticketbooking.auth_service.dto.payload.RefreshTokenRequest;
 import com.ticketbooking.auth_service.dto.payload.RegisterRequest;
+import com.ticketbooking.auth_service.dto.payload.ResetPasswordRequest;
 import com.ticketbooking.auth_service.dto.response.TokenResponse;
 import com.ticketbooking.auth_service.dto.response.TokenValidationResponse;
 import com.ticketbooking.auth_service.exception.AuthException;
@@ -37,6 +39,18 @@ public class AuthServiceController {
     @PostMapping("/refresh")
     public ResponseEntity<ApiResponse<TokenResponse>> refresh(@Valid @RequestBody RefreshTokenRequest request) {
         return ResponseEntity.ok(ResponseBuilder.success(authService.refresh(request), "Token refreshed"));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<Void>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        authService.requestPasswordReset(request);
+        return ResponseEntity.ok(ResponseBuilder.success(null, "If that email has an account, a password reset link has been sent."));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
+        return ResponseEntity.ok(ResponseBuilder.success(null, "Your password has been reset. Please sign in."));
     }
 
     @PostMapping("/logout")
