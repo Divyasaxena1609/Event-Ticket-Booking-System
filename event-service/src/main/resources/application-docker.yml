@@ -1,5 +1,9 @@
 spring:
   datasource:
-    url: jdbc:postgresql://auth-db:5432/auth_db
+    url: jdbc:postgresql://event-db:5432/event_db
     username: event_user
     password: event_pass
+
+services:
+  user:
+    url: http://user-service:8085

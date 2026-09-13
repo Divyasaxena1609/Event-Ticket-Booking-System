@@ -11,9 +11,11 @@ import java.util.List;
 
 public interface IEventService {
 
-     CreateEventResponse createEvent(CreateEventPayload request);
+     CreateEventResponse createEvent(CreateEventPayload request, String organizerUserUuid);
 
      List<CreateEventResponse>  getAllEvents();
+
+     List<CreateEventResponse> getOrganizerEvents(String organizerUserUuid);
 
      CreateEventResponse getEventByUuid(String eventUuid);
 

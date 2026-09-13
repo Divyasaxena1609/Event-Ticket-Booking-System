@@ -1,5 +1,24 @@
 spring:
   datasource:
-    url: jdbc:postgresql://auth-db:5432/auth_db
-    username: booking_user
-    password: booking_pass
+    url: ${BOOKING_DB_URL}
+    username: ${BOOKING_DB_USERNAME}
+    password: ${BOOKING_DB_PASSWORD}
+
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+
+services:
+  event:
+    url: ${EVENT_SERVICE_URL:http://event-service:8083}
+  user:
+    url: http://user-service:8085
+
+seat-lock:
+  allow-in-memory-fallback: false
+
+razorpay:
+  key-id: ${RAZORPAY_KEY_ID}
+  key-secret: ${RAZORPAY_KEY_SECRET}
+  webhook-secret: ${RAZORPAY_WEBHOOK_SECRET}

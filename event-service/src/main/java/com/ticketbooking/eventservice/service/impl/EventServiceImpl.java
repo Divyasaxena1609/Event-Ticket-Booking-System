@@ -16,15 +16,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor // create lombok constructor automatically for repository
+@RequiredArgsConstructor
 public class EventServiceImpl implements IEventService {
     private final EventRepository eventRepository;
 
     @Override
-    public CreateEventResponse createEvent(CreateEventPayload request){
+    public CreateEventResponse createEvent(CreateEventPayload request, String organizerUserUuid){
         if(request.getEventDate() != null &&
                 request.getEventDate().isBefore(java.time.LocalDate.now())) {
 
@@ -32,23 +33,32 @@ public class EventServiceImpl implements IEventService {
         }
 
         Event event = EntityDtoMapping.toEntity(request); // convert DTO → Entity
+        event.setOrganizerUserUuid(organizerUserUuid);
         event.setAvailableSeats(event.getTotalSeats());
+        if (event.getStatus() == null) {
+            event.setStatus(EventStatus.UPCOMING);
+        }
         eventRepository.save(event);
         return EntityDtoMapping.toDTO(event);
     }
 
     @Override
-    public  List<CreateEventResponse> getAllEvents(){
-        List<Event> events = eventRepository.findAll();
-
-        events.forEach(this::updateEventStatus);
-
-        return events.stream()
+    @Transactional(readOnly = true)
+    public List<CreateEventResponse> getAllEvents(){
+        return eventRepository.findByDeletedAtIsNullAndEventDateGreaterThanEqualAndStatusNot(LocalDate.now(), EventStatus.CANCELLED).stream()
                 .map(EntityDtoMapping::toDTO)
                 .toList();
     }
 
+    @Override
     @Transactional(readOnly = true)
+    public List<CreateEventResponse> getOrganizerEvents(String organizerUserUuid) {
+        return eventRepository.findByOrganizerUserUuidAndDeletedAtIsNull(organizerUserUuid).stream()
+                .map(EntityDtoMapping::toDTO)
+                .toList();
+    }
+
+    @Transactional
     @Override
     public CreateEventResponse getEventByUuid(String eventUuid){
 
@@ -72,6 +82,10 @@ public class EventServiceImpl implements IEventService {
 
         if(event.getStatus() == EventStatus.COMPLETED){
             throw new ApplicationException(ApplicationExceptionTypes.EVENT_ALREADY_COMPLETED);
+        }
+
+        if (payload.getEventDate() != null && payload.getEventDate().isBefore(LocalDate.now())) {
+            throw new ApplicationException(ApplicationExceptionTypes.INVALID_EVENT_DATE);
         }
 
         EntityDtoMapping.updateEntity(event, payload);
@@ -101,7 +115,7 @@ public class EventServiceImpl implements IEventService {
             return;
         }
 
-        if(event.getEventDate()
+        if (event.getEventDate() != null && event.getEndTime() != null && event.getEventDate()
                 .atTime(event.getEndTime())
                 .isBefore(java.time.LocalDateTime.now())){
 
@@ -110,7 +124,7 @@ public class EventServiceImpl implements IEventService {
             return;
         }
 
-        if(event.getAvailableSeats() == 0){
+        if (Integer.valueOf(0).equals(event.getAvailableSeats())) {
             event.setStatus(EventStatus.SOLD_OUT);
             eventRepository.save(event);
         }
