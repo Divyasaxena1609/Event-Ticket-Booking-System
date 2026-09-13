@@ -32,6 +32,12 @@ public class AuthAccount {
     @Column(name = "refresh_token_expires_at")
     private OffsetDateTime refreshTokenExpiresAt;
 
+    @Column(name = "password_reset_token_hash")
+    private String passwordResetTokenHash;
+
+    @Column(name = "password_reset_token_expires_at")
+    private OffsetDateTime passwordResetTokenExpiresAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 

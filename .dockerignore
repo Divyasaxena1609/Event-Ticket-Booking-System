@@ -1,0 +1,9 @@
+.git
+.idea
+.m2-local
+.pnpm-store
+**/target
+**/node_modules
+web-client/dist
+**/.env
+*.class

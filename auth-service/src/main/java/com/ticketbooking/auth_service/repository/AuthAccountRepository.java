@@ -8,4 +8,5 @@ import java.util.UUID;
 
 public interface AuthAccountRepository extends JpaRepository<AuthAccount, UUID> {
     Optional<AuthAccount> findByEmailIgnoreCase(String email);
+    Optional<AuthAccount> findByPasswordResetTokenHash(String passwordResetTokenHash);
 }

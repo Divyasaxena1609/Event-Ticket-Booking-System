@@ -5,31 +5,33 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
+import org.springframework.web.cors.reactive.CorsUtils;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
 
 import javax.crypto.SecretKey;
-import java.util.List;
 
 @Component
-@Order(Ordered.HIGHEST_PRECEDENCE)
+@Order(0)
 public class JwtAuthenticationFilter implements WebFilter {
-    private static final List<String> PUBLIC_PREFIXES = List.of("/auth/", "/event");
 
     @Value("${security.jwt.secret}")
     private String jwtSecret;
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
-        String path = exchange.getRequest().getURI().getPath();
+        if (CorsUtils.isPreFlightRequest(exchange.getRequest()) || HttpMethod.OPTIONS.equals(exchange.getRequest().getMethod())) {
+            return chain.filter(exchange);
+        }
+
         if (isPublicRequest(exchange)) {
             return chain.filter(exchange);
         }
@@ -65,10 +67,13 @@ public class JwtAuthenticationFilter implements WebFilter {
 
     private boolean isPublicRequest(ServerWebExchange exchange) {
         String path = exchange.getRequest().getURI().getPath();
-        if (path.startsWith("/auth/") || (path.startsWith("/event") && exchange.getRequest().getMethod().name().equals("GET"))) return true;
+        if (path.startsWith("/actuator")) return true;
+        if (path.startsWith("/auth/")) return true;
+        if (path.startsWith("/event") && HttpMethod.GET.equals(exchange.getRequest().getMethod())) return true;
         if (path.equals("/payment/webhook")) return true;
-        if (path.startsWith("/booking/event/") && path.endsWith("/seats") && exchange.getRequest().getMethod().name().equals("GET")) return true;
-        return path.equals("/user") && exchange.getRequest().getMethod().name().equals("POST");
+        if (path.startsWith("/booking/event/") && path.endsWith("/seats") && HttpMethod.GET.equals(exchange.getRequest().getMethod())) return true;
+        if (path.startsWith("/booking/event/") && path.endsWith("/seat-prices")) return true;
+        return path.equals("/user") && HttpMethod.POST.equals(exchange.getRequest().getMethod());
     }
 
     private SecretKey key() { return Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret)); }
@@ -78,3 +83,4 @@ public class JwtAuthenticationFilter implements WebFilter {
         return exchange.getResponse().setComplete();
     }
 }
+
