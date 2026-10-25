@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: auth-service
+
+  config:
+    # Lets local developers supply SMTP credentials without committing them.
+    import: optional:file:./.env[.properties],optional:file:./auth-service/.env[.properties]
+
+  profiles:
+        active: dev
+
+server:
+  port: 8081

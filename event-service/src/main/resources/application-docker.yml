@@ -1,0 +1,12 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://event-db:5432/event_db
+    username: event_user
+    password: event_pass
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+services:
+  user:
+    url: http://user-service:8085

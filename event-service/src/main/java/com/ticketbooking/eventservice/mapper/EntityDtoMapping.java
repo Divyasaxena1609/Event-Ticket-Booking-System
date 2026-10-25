@@ -1,0 +1,93 @@
+package com.ticketbooking.eventservice.mapper;
+
+import com.ticketbooking.eventservice.dto.payload.CreateEventPayload;
+import com.ticketbooking.eventservice.dto.payload.UpdateEventPayload;
+import com.ticketbooking.eventservice.dto.response.CreateEventResponse;
+import com.ticketbooking.eventservice.dto.response.UpdateEventResponse;
+import com.ticketbooking.eventservice.entity.Event;
+
+public class EntityDtoMapping {
+
+    public static Event toEntity(CreateEventPayload dto){
+        Event event = new Event();
+
+        event.setTitle(dto.getTitle());
+        event.setDescription(dto.getDescription());
+        event.setCategory(dto.getCategory());
+        event.setOrganizerName(dto.getOrganizerName());
+        event.setEventDate(dto.getEventDate());
+        event.setStartTime(dto.getStartTime());
+        event.setEndTime(dto.getEndTime());
+        event.setVenueName(dto.getVenueName());
+        event.setCity(dto.getCity());
+        event.setAddress(dto.getAddress());
+        event.setTotalSeats(dto.getTotalSeats());
+        event.setTicketPrice(dto.getTicketPrice());
+
+        return event;
+    }
+
+    public static void updateEntity(Event event, UpdateEventPayload dto){
+        if (dto.getTitle() != null) event.setTitle(dto.getTitle());
+        if (dto.getDescription() != null) event.setDescription(dto.getDescription());
+        if (dto.getCategory() != null) event.setCategory(dto.getCategory());
+        if (dto.getOrganizerName() != null) event.setOrganizerName(dto.getOrganizerName());
+        if (dto.getEventDate() != null) event.setEventDate(dto.getEventDate());
+        if (dto.getStartTime() != null) event.setStartTime(dto.getStartTime());
+        if (dto.getEndTime() != null) event.setEndTime(dto.getEndTime());
+        if (dto.getVenueName() != null) event.setVenueName(dto.getVenueName());
+        if (dto.getCity() != null) event.setCity(dto.getCity());
+        if (dto.getAddress() != null) event.setAddress(dto.getAddress());
+        if (dto.getTotalSeats() != null && dto.getTotalSeats() > 0 && dto.getTotalSeats() != event.getTotalSeats()) {
+            int difference = dto.getTotalSeats() - event.getTotalSeats();
+            event.setTotalSeats(dto.getTotalSeats());
+            event.setAvailableSeats(Math.max(0, event.getAvailableSeats() + difference));
+        }
+        if (dto.getTicketPrice() != null) event.setTicketPrice(dto.getTicketPrice());
+    }
+
+    public static CreateEventResponse toDTO(Event event){
+        CreateEventResponse dto = new CreateEventResponse();
+
+        dto.setEventUuid(event.getEventUuid());
+        dto.setTitle(event.getTitle());
+        dto.setDescription(event.getDescription());
+        dto.setCategory(event.getCategory());
+        dto.setOrganizerName(event.getOrganizerName());
+        dto.setOrganizerUserUuid(event.getOrganizerUserUuid());
+        dto.setEventDate(event.getEventDate());
+        dto.setStartTime(event.getStartTime());
+        dto.setEndTime(event.getEndTime());
+        dto.setVenueName(event.getVenueName());
+        dto.setCity(event.getCity());
+        dto.setAddress(event.getAddress());
+        dto.setTotalSeats(event.getTotalSeats());
+        dto.setAvailableSeats(event.getAvailableSeats());
+        dto.setTicketPrice(event.getTicketPrice());
+        dto.setStatus(event.getStatus());
+
+        return dto;
+    }
+
+    public static UpdateEventResponse UpdateDTO(Event event){
+        UpdateEventResponse dto = new UpdateEventResponse();
+
+        dto.setEventUuid(event.getEventUuid());
+        dto.setTitle(event.getTitle());
+        dto.setDescription(event.getDescription());
+        dto.setCategory(event.getCategory());
+        dto.setOrganizerName(event.getOrganizerName());
+        dto.setOrganizerUserUuid(event.getOrganizerUserUuid());
+        dto.setEventDate(event.getEventDate());
+        dto.setStartTime(event.getStartTime());
+        dto.setEndTime(event.getEndTime());
+        dto.setVenueName(event.getVenueName());
+        dto.setCity(event.getCity());
+        dto.setAddress(event.getAddress());
+        dto.setTotalSeats(event.getTotalSeats());
+        dto.setAvailableSeats(event.getAvailableSeats());
+        dto.setTicketPrice(event.getTicketPrice());
+
+        return dto;
+    }
+}
