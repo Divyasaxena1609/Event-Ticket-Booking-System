@@ -5,6 +5,7 @@ import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import com.ticketbooking.eventservice.entity.EventStatus;
 
 @Data
 public class CreateEventResponse {
@@ -18,6 +19,8 @@ public class CreateEventResponse {
     private String category;
 
     private String organizerName;
+
+    private String organizerUserUuid;
 
     private LocalDate eventDate;
 
@@ -36,4 +39,6 @@ public class CreateEventResponse {
     private Integer availableSeats;
 
     private BigDecimal ticketPrice;
+
+    private EventStatus status;
 }

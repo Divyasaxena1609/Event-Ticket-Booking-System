@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ticket Booking API Documentation</title>
+    <link rel="stylesheet" href="/swagger-ui-assets/swagger-ui.css" />
+  </head>
+  <body>
+    <div id="swagger-ui"></div>
+    <script src="/swagger-ui-assets/swagger-ui-bundle.js"></script>
+    <script src="/swagger-ui-assets/swagger-ui-standalone-preset.js"></script>
+    <script>
+      window.ui = SwaggerUIBundle({
+        dom_id: '#swagger-ui',
+        urls: [
+          { name: 'Authentication', url: '/v3/api-docs/auth' },
+          { name: 'Events', url: '/v3/api-docs/events' },
+          { name: 'Bookings and Payments', url: '/v3/api-docs/booking' },
+          { name: 'Users', url: '/v3/api-docs/users' }
+        ],
+        'urls.primaryName': 'Authentication',
+        layout: 'StandaloneLayout',
+        deepLinking: true,
+        presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset]
+      });
+    </script>
+  </body>
+</html>

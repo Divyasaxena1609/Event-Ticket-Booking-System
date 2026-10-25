@@ -3,6 +3,7 @@ package com.ticketbooking.eventservice.entity;
 import com.ticketbooking.utils.StringUtils;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.*;
 
 import jakarta.persistence.*;
@@ -12,11 +13,11 @@ import java.time.LocalTime;
 import java.time.OffsetDateTime;
 
 @Entity
-@Table(name = "events" ,
+@Table(name = "events",
     indexes = {
-    @Index(name = "idx_event_uuid", columnList = "event_uuid")
-        }
-    )
+        @Index(name = "idx_event_uuid", columnList = "event_uuid")
+    }
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -40,6 +41,9 @@ public class Event {
 
     private String organizerName;
 
+    @Column(name = "organizer_user_uuid", nullable = false, updatable = false)
+    private String organizerUserUuid;
+
     @NotNull
     private LocalDate eventDate;
 
@@ -58,7 +62,7 @@ public class Event {
     @Positive
     private int totalSeats;
 
-    @Positive
+    @PositiveOrZero
     private int availableSeats;
 
     private BigDecimal ticketPrice;
