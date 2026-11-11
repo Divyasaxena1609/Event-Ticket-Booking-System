@@ -1,8 +1,8 @@
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/event_db
-    username: postgres
-    password: ${EVENT_DB_PASSWORD:Divya@1609}
+    username: ${EVENT_DB_USERNAME:postgres}
+    password: ${EVENT_DB_PASSWORD}
 
   jpa:
     hibernate:
