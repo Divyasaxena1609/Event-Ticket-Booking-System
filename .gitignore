@@ -1,1 +1,25 @@
+# Secrets and local environment files
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Build outputs and generated artifacts
+**/target/
+**/build/
+**/node_modules/
+.pnpm-store/
+**/.pnpm-store/
+*.class
+
+# IDE and OS files
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Local Maven cache
 .m2-local/
