@@ -171,7 +171,7 @@ cd Event-Ticket-Booking-System
 
 ### 2. Start the complete application (no `.env` required)
 
-For a local development/demo run, no environment file or manual database setup is required. The Compose file supplies clearly labelled local-only defaults for the four database passwords and the shared JWT key. From the repository root, run exactly:
+For a local development/demo run, no environment file or manual database setup is required. The Compose file supplies local-development defaults for the four database passwords and the shared JWT key. A root `.env` file is optional. From the repository root, run exactly:
 
 ```bash
 docker compose up
@@ -183,34 +183,34 @@ This runs in the foreground and streams logs. To build images explicitly on the 
 docker compose up --build
 ```
 
-The first build may take several minutes and requires internet access to download base images and dependencies. Compose builds the backend services and web client, creates four PostgreSQL databases and Redis, waits for database/Redis health checks, and starts the application services.
+The first build may take several minutes and requires internet access to download base images and dependencies. Compose builds the backend services and web client, creates four PostgreSQL databases and Redis, waits for database/Redis health checks, and starts the application services. The web UI is published on host port `8088` only; the gateway and database/cache ports are internal to the Compose network.
 
 ### 3. Open the application
 
 | Purpose | URL |
 |---|---|
 | EventHorizon web app | http://localhost:8088 |
-| Web app (standard HTTP port) | http://localhost |
+
 | Combined Swagger UI | http://localhost:8088/swagger-ui.html |
-| Swagger UI (standard HTTP port) | http://localhost/swagger-ui.html |
+
 
 The API gateway is internal to the Docker network and is not published as a host port by the Compose configuration. Use the frontend's `/api` proxy or the Nginx-served Swagger UI rather than trying to access the gateway directly from your host. The local Compose stack is intended for development/demo use; its default credentials and JWT key are public, predictable local defaults and must never be used in production.
 
 ## Environment configuration
 
-The root `.env.example` is the source of the variable names expected by `compose.yaml`. Configure the following in your private root `.env` file.
+The root `.env.example` is the source of the variable names expected by `compose.yaml`. The following variables can optionally be set in a private root `.env` file to override the local defaults or enable external integrations. If omitted, Compose uses the defaults shown below.
 
 | Variable | Required? | Purpose |
 |---|---:|---|
 | `AUTH_DB_USERNAME` | Yes (default provided) | Auth database username |
-| `AUTH_DB_PASSWORD` | **Yes** | Auth database password |
+| `AUTH_DB_PASSWORD` | Optional (local default) | Auth database password |
 | `USER_DB_USERNAME` | Yes (default provided) | User database username |
-| `USER_DB_PASSWORD` | **Yes** | User database password |
+| `USER_DB_PASSWORD` | Optional (local default) | User database password |
 | `EVENT_DB_USERNAME` | Yes (default provided) | Event database username |
-| `EVENT_DB_PASSWORD` | **Yes** | Event database password |
+| `EVENT_DB_PASSWORD` | Optional (local default) | Event database password |
 | `BOOKING_DB_USERNAME` | Yes (default provided) | Booking database username |
-| `BOOKING_DB_PASSWORD` | **Yes** | Booking database password |
-| `SECURITY_JWT_SECRET` | **Yes** | Shared JWT signing/validation secret for auth-service and gateway |
+| `BOOKING_DB_PASSWORD` | Optional (local default) | Booking database password |
+| `SECURITY_JWT_SECRET` | Optional (local default) | Shared JWT signing/validation secret for auth-service and gateway |
 | `RAZORPAY_KEY_ID` | Optional for startup; required for live checkout | Razorpay API key ID |
 | `RAZORPAY_KEY_SECRET` | Optional for startup; required for live checkout | Razorpay API key secret |
 | `RAZORPAY_WEBHOOK_SECRET` | Optional for startup; required for webhook verification | Secret configured for the Razorpay webhook |
@@ -229,8 +229,8 @@ The root `.env.example` is the source of the variable names expected by `compose
 - To override defaults, copy `.env.example` to `.env` and set your own values. Compose automatically reads the root `.env` file.
 - Use different strong passwords for the four databases outside a disposable local demo.
 - Keep `SECURITY_JWT_SECRET` identical for auth-service and api-gateway. Override the public local default anywhere beyond a local demo.
-- Razorpay credentials are not required to start the stack. Real checkout and webhook verification require valid Razorpay configuration. Empty values disable the credentials configuration; payment bean/client initialization and the full no-credentials runtime still need to be verified by running the stack.
-- SMTP settings are needed for email-based password recovery to deliver email. SMTP is disabled by default for the local zero-configuration run; without working SMTP settings, the email workflow cannot deliver a reset message.
+- Razorpay credentials are not required to start the stack. Real checkout and webhook verification require valid Razorpay configuration. The booking Docker profile passes empty values when credentials are omitted; payment operations will not be usable until valid Razorpay credentials are configured. The complete no-credentials runtime should be verified in your environment.
+- SMTP settings are needed for email-based password recovery to deliver email. SMTP authentication and STARTTLS are disabled by default for the local zero-configuration run; without working SMTP settings, the email workflow cannot deliver a reset message.
 - Set `PASSWORD_RESET_FRONTEND_URL` to the externally reachable frontend URL when deploying outside local development.
 - Never add real credentials to `.env.example`, source code, Dockerfiles, or README files.
 
@@ -273,6 +273,12 @@ docker compose up --build -d
 ```
 
 ### Run in the background (optional)
+
+```bash
+docker compose up -d
+```
+
+To build or rebuild images while running in the background:
 
 ```bash
 docker compose up --build -d
@@ -522,10 +528,9 @@ The repository includes booking, payment, seat-lock, event, authentication, and 
 
 ### Docker says a required environment variable is missing
 
-- Confirm that the file is named exactly `.env`.
-- Confirm it is in the repository root beside `compose.yaml`.
-- Replace all required database password and JWT placeholders.
-- Re-run `docker compose up --build -d`.
+- A `.env` file is not required for local startup. If you choose to override defaults, confirm the file is named exactly `.env` and is in the repository root beside `compose.yaml`.
+- Ensure any overridden database credentials match between the database and corresponding service environment settings.
+- Re-run `docker compose up --build`.
 
 ### A service is unhealthy or keeps restarting
 
