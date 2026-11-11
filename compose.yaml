@@ -3,11 +3,11 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_DB: auth_db
-      POSTGRES_USER: auth_user
-      POSTGRES_PASSWORD: auth_pass
+      POSTGRES_USER: ${AUTH_DB_USERNAME:-auth_user}
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD:?Set AUTH_DB_PASSWORD in root .env}
     volumes: [auth-db-data:/var/lib/postgresql/data]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U auth_user -d auth_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${AUTH_DB_USERNAME:-auth_user} -d auth_db"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -16,11 +16,11 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_DB: user_db
-      POSTGRES_USER: user_postgres
-      POSTGRES_PASSWORD: user_pass
+      POSTGRES_USER: ${USER_DB_USERNAME:-user_postgres}
+      POSTGRES_PASSWORD: ${USER_DB_PASSWORD:?Set USER_DB_PASSWORD in root .env}
     volumes: [user-db-data:/var/lib/postgresql/data]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user_postgres -d user_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${USER_DB_USERNAME:-user_postgres} -d user_db"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -29,11 +29,11 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_DB: event_db
-      POSTGRES_USER: event_user
-      POSTGRES_PASSWORD: event_pass
+      POSTGRES_USER: ${EVENT_DB_USERNAME:-event_user}
+      POSTGRES_PASSWORD: ${EVENT_DB_PASSWORD:?Set EVENT_DB_PASSWORD in root .env}
     volumes: [event-db-data:/var/lib/postgresql/data]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U event_user -d event_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${EVENT_DB_USERNAME:-event_user} -d event_db"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -42,11 +42,11 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_DB: booking_db
-      POSTGRES_USER: booking_user
-      POSTGRES_PASSWORD: booking_pass
+      POSTGRES_USER: ${BOOKING_DB_USERNAME:-booking_user}
+      POSTGRES_PASSWORD: ${BOOKING_DB_PASSWORD:?Set BOOKING_DB_PASSWORD in root .env}
     volumes: [booking-db-data:/var/lib/postgresql/data]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U booking_user -d booking_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${BOOKING_DB_USERNAME:-booking_user} -d booking_db"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -63,14 +63,19 @@ services:
 
   user-service:
     build: { context: ., dockerfile: docker/Dockerfile.backend, args: { SERVICE: user-service } }
-    environment: { SPRING_PROFILES_ACTIVE: docker }
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      USER_DB_USERNAME: ${USER_DB_USERNAME:-user_postgres}
+      USER_DB_PASSWORD: ${USER_DB_PASSWORD:?Set USER_DB_PASSWORD in root .env}
     depends_on: { user-db: { condition: service_healthy } }
 
   auth-service:
     build: { context: ., dockerfile: docker/Dockerfile.backend, args: { SERVICE: auth-service } }
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      SECURITY_JWT_SECRET: ${SECURITY_JWT_SECRET:-VGhpcy1pcy1hLWRldmVsb3BtZW50LW9ubHktMzItYnl0ZS1rZXk=}
+      AUTH_DB_USERNAME: ${AUTH_DB_USERNAME:-auth_user}
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD:?Set AUTH_DB_PASSWORD in root .env}
+      SECURITY_JWT_SECRET: ${SECURITY_JWT_SECRET:?Set SECURITY_JWT_SECRET in root .env}
       USER_SERVICE_URL: http://user-service:8085
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
@@ -86,7 +91,11 @@ services:
 
   event-service:
     build: { context: ., dockerfile: docker/Dockerfile.backend, args: { SERVICE: event-service } }
-    environment: { SPRING_PROFILES_ACTIVE: docker, USER_SERVICE_URL: http://user-service:8085 }
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      EVENT_DB_USERNAME: ${EVENT_DB_USERNAME:-event_user}
+      EVENT_DB_PASSWORD: ${EVENT_DB_PASSWORD:?Set EVENT_DB_PASSWORD in root .env}
+      USER_SERVICE_URL: http://user-service:8085
     depends_on:
       event-db: { condition: service_healthy }
       user-service: { condition: service_started }
@@ -96,8 +105,8 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       BOOKING_DB_URL: jdbc:postgresql://booking-db:5432/booking_db
-      BOOKING_DB_USERNAME: booking_user
-      BOOKING_DB_PASSWORD: booking_pass
+      BOOKING_DB_USERNAME: ${BOOKING_DB_USERNAME:-booking_user}
+      BOOKING_DB_PASSWORD: ${BOOKING_DB_PASSWORD:?Set BOOKING_DB_PASSWORD in root .env}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       EVENT_SERVICE_URL: http://event-service:8083
@@ -118,7 +127,7 @@ services:
   api-gateway:
     build: { context: ., dockerfile: docker/Dockerfile.backend, args: { SERVICE: api-gateway } }
     environment:
-      SECURITY_JWT_SECRET: ${SECURITY_JWT_SECRET:-VGhpcy1pcy1hLWRldmVsb3BtZW50LW9ubHktMzItYnl0ZS1rZXk=}
+      SECURITY_JWT_SECRET: ${SECURITY_JWT_SECRET:?Set SECURITY_JWT_SECRET in root .env}
       AUTH_SERVICE_URL: http://auth-service:8081
       BOOKING_SERVICE_URL: http://booking-service:8082
       EVENT_SERVICE_URL: http://event-service:8083
