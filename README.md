@@ -169,54 +169,23 @@ git clone https://github.com/Divyasaxena1609/Event-Ticket-Booking-System.git
 cd Event-Ticket-Booking-System
 ```
 
-### 2. Create your local environment file
+### 2. Start the complete application (no `.env` required)
 
-Copy the example file in the repository root:
-
-**Windows PowerShell**
-```powershell
-Copy-Item .env.example .env
-notepad .env
-```
-
-**macOS / Linux**
-```bash
-cp .env.example .env
-```
-
-Edit the root `.env` file and replace every database password placeholder and the JWT secret with unique, strong values. Do not commit this file.
-
-### 3. Generate a JWT secret
-
-Generate a cryptographically random 32-byte value and place its Base64 output in `SECURITY_JWT_SECRET`. The same value is used by auth-service and api-gateway.
-
-**Windows PowerShell**
-```powershell
-$bytes = New-Object byte[] 32
-$rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
-$rng.GetBytes($bytes)
-$rng.Dispose()
-[Convert]::ToBase64String($bytes)
-```
-
-**macOS / Linux**
-```bash
-openssl rand -base64 32
-```
-
-Do not reuse the example placeholder or a secret from another environment.
-
-### 4. Start the complete application
-
-Run from the repository root:
+For a local development/demo run, no environment file or manual database setup is required. The Compose file supplies clearly labelled local-only defaults for the four database passwords and the shared JWT key. From the repository root, run exactly:
 
 ```bash
-docker compose up --build -d
+docker compose up
 ```
 
-The first build may take several minutes. Compose builds the backend services and web client, creates the PostgreSQL databases and Redis instance, waits for database/Redis health checks, and starts the application services.
+This runs in the foreground and streams logs. To build images explicitly on the first run or after Dockerfile/dependency changes, use:
 
-### 5. Open the application
+```bash
+docker compose up --build
+```
+
+The first build may take several minutes and requires internet access to download base images and dependencies. Compose builds the backend services and web client, creates four PostgreSQL databases and Redis, waits for database/Redis health checks, and starts the application services.
+
+### 3. Open the application
 
 | Purpose | URL |
 |---|---|
@@ -225,7 +194,7 @@ The first build may take several minutes. Compose builds the backend services an
 | Combined Swagger UI | http://localhost:8088/swagger-ui.html |
 | Swagger UI (standard HTTP port) | http://localhost/swagger-ui.html |
 
-The API gateway is internal to the Docker network and is not published as a host port by the Compose configuration. Use the frontend's `/api` proxy or the Nginx-served Swagger UI rather than trying to access the gateway directly from your host.
+The API gateway is internal to the Docker network and is not published as a host port by the Compose configuration. Use the frontend's `/api` proxy or the Nginx-served Swagger UI rather than trying to access the gateway directly from your host. The local Compose stack is intended for development/demo use; its default credentials and JWT key are public, predictable local defaults and must never be used in production.
 
 ## Environment configuration
 
@@ -256,11 +225,12 @@ The root `.env.example` is the source of the variable names expected by `compose
 
 **Important configuration notes**
 
-- All four database passwords and `SECURITY_JWT_SECRET` are required by the Compose configuration.
-- Use different strong passwords for the four databases.
-- Keep `SECURITY_JWT_SECRET` identical for auth-service and api-gateway, and keep it private.
-- Razorpay credentials are not required just to start the stack, but real checkout cannot work without valid Razorpay configuration.
-- SMTP settings are needed for email-based password recovery to deliver email. Without working SMTP settings, the email workflow cannot deliver a reset message.
+- For the zero-configuration local run, all database credentials and `SECURITY_JWT_SECRET` have local-only defaults; `.env` is optional.
+- To override defaults, copy `.env.example` to `.env` and set your own values. Compose automatically reads the root `.env` file.
+- Use different strong passwords for the four databases outside a disposable local demo.
+- Keep `SECURITY_JWT_SECRET` identical for auth-service and api-gateway. Override the public local default anywhere beyond a local demo.
+- Razorpay credentials are not required to start the stack. Real checkout and webhook verification require valid Razorpay configuration. Empty values disable the credentials configuration; payment bean/client initialization and the full no-credentials runtime still need to be verified by running the stack.
+- SMTP settings are needed for email-based password recovery to deliver email. SMTP is disabled by default for the local zero-configuration run; without working SMTP settings, the email workflow cannot deliver a reset message.
 - Set `PASSWORD_RESET_FRONTEND_URL` to the externally reachable frontend URL when deploying outside local development.
 - Never add real credentials to `.env.example`, source code, Dockerfiles, or README files.
 
@@ -297,6 +267,12 @@ docker compose restart booking-service
 ```
 
 ### Rebuild after code or dependency changes
+
+```bash
+docker compose up --build -d
+```
+
+### Run in the background (optional)
 
 ```bash
 docker compose up --build -d
