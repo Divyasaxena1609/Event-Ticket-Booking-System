@@ -1,8 +1,8 @@
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/auth_db
-    username: postgres
-    password: ${AUTH_DB_PASSWORD:Divya@1609}
+    username: ${AUTH_DB_USERNAME:postgres}
+    password: ${AUTH_DB_PASSWORD}
 
   jpa:
     hibernate:
@@ -12,8 +12,7 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
-  # Configure these in your environment to send mail, e.g. SMTP_HOST, SMTP_PORT,
-  # SMTP_USERNAME and SMTP_PASSWORD (use an app password for Gmail).
+  # Configure SMTP credentials through environment variables; never commit them.
   mail:
     host: ${SMTP_HOST:}
     port: ${SMTP_PORT:587}
@@ -25,8 +24,7 @@ spring:
 
 security:
   jwt:
-    # Replace this development-only key through SECURITY_JWT_SECRET in deployed environments.
-    secret: ${SECURITY_JWT_SECRET:VGhpcy1pcy1hLWRldmVsb3BtZW50LW9ubHktMzItYnl0ZS1rZXk=}
+    secret: ${SECURITY_JWT_SECRET}
     access-token-expiration: 15m
     refresh-token-expiration: 7d
 

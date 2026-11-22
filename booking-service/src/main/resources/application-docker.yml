@@ -22,7 +22,9 @@ services:
 seat-lock:
   allow-in-memory-fallback: false
 
+# Empty credentials allow the local application stack to boot.
+# Configure real Razorpay credentials to enable checkout and webhook verification.
 razorpay:
-  key-id: ${RAZORPAY_KEY_ID}
-  key-secret: ${RAZORPAY_KEY_SECRET}
-  webhook-secret: ${RAZORPAY_WEBHOOK_SECRET}
+  key-id: ${RAZORPAY_KEY_ID:}
+  key-secret: ${RAZORPAY_KEY_SECRET:}
+  webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:}
