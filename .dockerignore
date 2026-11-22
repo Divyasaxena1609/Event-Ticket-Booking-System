@@ -7,3 +7,12 @@
 web-client/dist
 **/.env
 *.class
+
+# Python virtual environments and generated files
+**/.venv
+**/venv
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/*.py[cod]
